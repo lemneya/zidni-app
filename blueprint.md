@@ -1,289 +1,47 @@
-# Alwakil - Firestore Blueprint
 
-## 1. Core Design Rules
+# Zidni Mobile App Blueprint
 
-*   **Rule 1 — Private-by-default:** User-owned data lives under `/users/{uid}/...`
-*   **Rule 2 — Public data is mirrored:** Anything searchable globally is a public mirror with limited fields.
-*   **Rule 3 — Artifacts are first-class:** Every Alwakil output is an “artifact” you can share (WhatsApp card/PDF).
-*   **Rule 4 — Proof is sacred:** Pay always writes to a receipt vault + audit log.
-*   **Rule 5 — Trust scoring is server-owned:** Only Cloud Functions can write trust scores / risk flags.
+## 1. Purpose & Capabilities
 
-## 2. Collections Overview
+Zidni is a mobile application designed to streamline the process of capturing and organizing information during trade shows and other events. It allows users to create "deal folders" for specific vendors or topics, and within each folder, capture audio snippets of conversations. These audio snippets are then transcribed into text and saved as "Gul captures."
 
-### Identity + Trust
-*   `users/{uid}` (private root doc)
-*   `public_profiles/{uid}` (public mirror for discovery)
-*   `trust_profiles/{uid}` (server-owned trust + tiers)
-*   `kyc_cases/{caseId}` (optional, if/when you do verification)
+The app is built with Flutter and leverages Firebase for backend services, including:
 
-### GUL (Voice: “Tongue”)
-*   `voice_sessions/{sessionId}`
-*   `users/{uid}/voice_sessions/{sessionId}` (user-owned mirror)
-*   `conversation_threads/{threadId}` (optional, if you keep threads)
+*   **Firestore:** To store deal folders and Gul captures.
+*   **Firebase Authentication:** To authenticate users anonymously.
 
-### Alwakil (Action: “Hands”)
-*   `deal_folders/{folderId}` (shareable business objects)
-*   `artifacts/{artifactId}` (reports, checklists, summaries, drafts)
-*   `scans/{scanId}` (OCR inputs + extracted entities)
-*   `entities/{entityId}` (normalized suppliers/products/people/orgs)
+## 2. Style, Design & Features
 
-### Pay (Pocket: money + proof)
-*   `wallets/{walletId}` (if/when you store balances; otherwise omit)
-*   `payment_intents/{intentId}` (partner-first payments)
-*   `invoices/{invoiceId}`
-*   `receipts/{receiptId}` (proof vault, immutable)
-*   `disputes/{disputeId}` (evidence bundles + timeline)
+### 2.1. Overall Design
 
-### Services (City: marketplace)
-*   `services/{serviceId}`
-*   `merchants/{merchantId}`
-*   `orders/{orderId}` (if ordering/bookings exist)
-*   `mini_apps/{appId}` (plug-in registry)
-*   `subscriptions/{subId}` (Zidni plans + entitlements)
+The app will have a clean and modern design, with a focus on ease of use. The primary color scheme will be based on shades of blue, with clear and legible typography.
 
-### System
-*   `notifications/{notificationId}`
-*   `audit_logs/{logId}` (server-only, compliance, debugging)
-*   `feature_flags/{flagId}`
-*   `rate_limits/{key}` (optional)
+### 2.2. Screens
 
-## 3. Key Document Schemas
+The app will have the following screens:
 
-### users/{uid}
-```json
-{
-  "displayName": "String",
-  "phone": "String",
-  "locale": "String",
-  "dialect": "String",
-  "createdAt": "Timestamp",
-  "lastActiveAt": "Timestamp",
-  "roles": ["user", "merchant_admin"],
-  "defaults": { "currency": "USD", "country": "MR" },
-  "privacy": { "shareByDefault": false }
-}
-```
+*   **Deal Folders Screen:** This screen will display a list of all the user's deal folders. Users will be able to create new folders from this screen.
+*   **Deal Folder Detail Screen:** This screen will display the details of a specific deal folder, including a list of all the Gul captures within that folder.
+*   **Capture Screen:** This screen will allow the user to record audio and have it transcribed into text.
 
-### public_profiles/{uid}
-```json
-{
-  "name": "String",
-  "city": "String",
-  "categories": ["Trader", "Logistics", "Tiles"],
-  "tierBadge": "Verified|Pro|Certified",
-  "ratingSummary": { "avg": "Number", "count": "Number" },
-  "updatedAt": "Timestamp"
-}
-```
+### 2.3. Features
 
-### trust_profiles/{uid}
-```json
-{
-  "tier": "Basic|Verified|Pro|Certified",
-  "score": "Number",
-  "flags": ["high_dispute_rate", "unverified_docs"],
-  "signals": { "receiptsCount": "Number", "disputesCount": "Number", "successfulDeals": "Number" },
-  "updatedAt": "Timestamp"
-}
-```
+*   **Create Deal Folders:** Users can create new deal folders to organize their captures.
+*   **Capture Audio:** Users can record audio snippets of conversations.
+*   **Transcribe Audio:** The app will use a speech-to-text engine to transcribe the audio into text.
+*   **Save Captures:** The transcribed text will be saved as a "Gul capture" within a deal folder.
+*   **View Captures:** Users can view a list of all their captures within a deal folder.
+*   **Offline Support:** The app will use Firestore's offline persistence to allow users to view and create data even when they are not connected to the internet.
 
-### voice_sessions/{sessionId}
-```json
-{
-  "ownerUid": "String",
-  "mode": "translate|summarize|capture_terms",
-  "languages": { "from": "ar", "to": "zh" },
-  "status": "open|closed",
-  "createdAt": "Timestamp",
-  "closedAt": "Timestamp",
-  "linked": { "dealFolderId": "String", "threadId": "String" },
-  "share": { "enabled": false, "shareId": null }
-}
-```
+## 3. Implementation Plan
 
-### deal_folders/{folderId}
-```json
-{
-  "ownerUid": "String",
-  "title": "String",
-  "type": "supplier_deal|product_research|immigration_case|personal",
-  "participants": [{ "uidOrExternalId": "String", "role": "supplier|buyer|agent" }],
-  "tags": ["tiles","foshan"],
-  "status": "active|won|lost|archived",
-  "createdAt": "Timestamp",
-  "updatedAt": "Timestamp",
-  "acl": { "owners":["uid"], "editors":["uid"], "viewers":["uid"], "publicShare":false }
-}
-```
+The following steps will be taken to implement the Zidni mobile app:
 
-### scans/{scanId}
-```json
-{
-  "ownerUid": "String",
-  "source": "camera|upload",
-  "docType": "license|invoice|product|receipt|id|qr",
-  "storagePath": "String",
-  "extracted": { "text": "String", "fields": "Map", "entities": ["entityId"] },
-  "linked": { "dealFolderId": "String", "artifactId": "String" },
-  "createdAt": "Timestamp"
-}
-```
+1.  **Set up the project structure:** Create the necessary folders and files for the application.
+2.  **Implement the UI:** Build the user interface for the different screens of the app.
+3.  **Connect to Firebase:** Set up the Firebase connection and implement the necessary services.
+4.  **Implement business logic:** Add the core functionalities of the app, such as creating, reading, and updating data.
+5.  **Integrate speech-to-text:** Integrate a speech-to-text engine to transcribe audio.
+6.  **Test the app:** Ensure that the app is working as expected.
 
-### artifacts/{artifactId}
-```json
-{
-  "ownerUid": "String",
-  "kind": "trust_report|summary|checklist|negotiation_script|pdf",
-  "title": "String",
-  "content": { "blocks":[] },
-  "confidence": "Number",
-  "sources": [{ "type":"scan", "id":"scanId" }, { "type":"user_note", "id": "String" } ],
-  "share": { "enabled":true, "shareId": "String", "expiresAt": "Timestamp" },
-  "linked": { "dealFolderId": "String" },
-  "createdAt": "Timestamp",
-  "updatedAt": "Timestamp"
-}
-```
-
-### entities/{entityId}
-```json
-{
-  "type": "supplier|product|person|company",
-  "name": "String",
-  "identifiers": { "phone": "String", "wechat": "String", "licenseNo": "String", "website": "String" },
-  "country": "String",
-  "trustSignals": { "seenInReceipts": "Number", "disputes": "Number" },
-  "createdAt": "Timestamp",
-  "updatedAt": "Timestamp"
-}
-```
-
-### payment_intents/{intentId}
-```json
-{
-  "ownerUid": "String",
-  "amount": "Number", "currency": "String",
-  "purpose": "invoice_payment|escrow|subscription",
-  "status": "created|processing|succeeded|failed|canceled",
-  "partner": { "name":"Skyee|Stripe|...", "refId": "String" },
-  "linked": { "invoiceId": "String", "dealFolderId": "String" },
-  "createdAt": "Timestamp",
-  "updatedAt": "Timestamp"
-}
-```
-
-### receipts/{receiptId}
-```json
-{
-  "ownerUid": "String",
-  "type": "payment|refund|escrow_release",
-  "amount": "Number", "currency": "String",
-  "parties": { "payer": "String", "payee": "String" },
-  "proof": { "partnerRef": "String", "invoiceNo": "String", "files":["storagePath"] },
-  "linked": { "paymentIntentId": "String", "invoiceId": "String", "dealFolderId": "String" },
-  "createdAt": "Timestamp",
-  "immutable": true
-}
-```
-
-### disputes/{disputeId}
-```json
-{
-  "ownerUid": "String",
-  "against": { "entityId": "String" or "uid": "String" },
-  "status": "open|negotiation|mediation|resolved|closed",
-  "claim": { "amount": "Number", "reason": "String" },
-  "evidence": { "receipts":["receiptId"], "artifacts":["artifactId"], "scans":["scanId"] },
-  "timeline": [{ "at": "Timestamp", "by": "String", "action": "String", "note": "String" }],
-  "createdAt": "Timestamp",
-  "updatedAt": "Timestamp"
-}
-```
-
-### services/{serviceId}
-```json
-{
-  "nameAr": "String",
-  "category": "String",
-  "enabled": true,
-  "routingHint": "services",
-  "trustRequiredTier": "Basic|Verified|Pro",
-  "createdAt": "Timestamp",
-  "updatedAt": "Timestamp"
-}
-```
-
-### mini_apps/{appId}
-```json
-{
-  "name": "String",
-  "ownerOrgId": "String",
-  "entryPoints": [
-    { "type":"url"|"native", "pathOrScheme": "String", "intents":["scan","pay","verify"] }
-  ],
-  "permissions": ["read_public_profile", "create_order"],
-  "enabled": true,
-  "updatedAt": "Timestamp"
-}
-```
-
-## 4. Security Rules (Baseline)
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users can only manage their own data
-    match /users/{userId}/{documents=**} {
-      allow read, write: if request.auth.uid == userId;
-    }
-
-    // Public profiles are read-only for authenticated users
-    match /public_profiles/{userId} {
-      allow read: if request.auth != null;
-      allow write: if false;
-    }
-
-    // Trust profiles are server-owned
-    match /trust_profiles/{userId} {
-      allow read, write: if false;
-    }
-
-    // Deal folders can be created by the owner
-    match /deal_folders/{folderId} {
-        allow create: if request.resource.data.ownerUid == request.auth.uid;
-        allow read, write: if resource.data.ownerUid == request.auth.uid;
-    }
-
-    // Artifacts can be created by the owner
-    match /artifacts/{artifactId} {
-        allow create: if request.resource.data.ownerUid == request.auth.uid;
-        allow read, write: if resource.data.ownerUid == request.auth.uid;
-    }
-
-    // Scans can be created by the owner
-    match /scans/{scanId} {
-        allow create: if request.resource.data.ownerUid == request.auth.uid;
-        allow read, write: if resource.data.ownerUid == request.auth.uid;
-    }
-
-    // Voice sessions can be created by the owner
-    match /voice_sessions/{sessionId} {
-        allow create: if request.resource.data.ownerUid == request.auth.uid;
-        allow read, write: if resource.data.ownerUid == request.auth.uid;
-    }
-
-    // Receipts are immutable
-    match /receipts/{receiptId} {
-      allow create: if request.resource.data.ownerUid == request.auth.uid;
-      allow read: if resource.data.ownerUid == request.auth.uid;
-      allow update, delete: if false;
-    }
-
-    // Audit logs are server-only
-    match /audit_logs/{logId} {
-      allow read, write: if false;
-    }
-  }
-}
-```
+This `blueprint.md` file will be updated as the project progresses to reflect the current state of the application.

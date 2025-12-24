@@ -80,6 +80,7 @@ class _GulControlState extends State<GulControl> {
       case SttStatus.blocked:
         return Colors.grey;
       case SttStatus.idle:
+      default:
         return Theme.of(context).primaryColor;
     }
   }
@@ -97,6 +98,7 @@ class _GulControlState extends State<GulControl> {
       case SttStatus.blocked:
         return const Icon(Icons.mic_off_outlined, color: Colors.white, size: 40);
       case SttStatus.idle:
+      default:
         return const Icon(Icons.mic_none, color: Colors.white, size: 40);
     }
   }
