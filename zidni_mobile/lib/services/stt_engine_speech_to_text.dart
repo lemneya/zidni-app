@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'stt_engine.dart';
 
@@ -28,16 +27,6 @@ class SttEngineSpeechToText implements SttEngine {
   Future<bool> initialize() async {
     if (_initialized) return _available;
 
-    // Silent check for both microphone and speech recognition permissions.
-    final micStatus = await Permission.microphone.status;
-    final speechStatus = await Permission.speech.status; // Required for iOS
-
-    if (!micStatus.isGranted || !speechStatus.isGranted) {
-      _initialized = true;
-      _available = false;
-      return false; // Do NOT call _speech.initialize()
-    }
-
     final ok = await _speech.initialize(
       onStatus: _handleStatusChange,
       onError: (_) => _setBlocked(),
@@ -45,7 +34,8 @@ class SttEngineSpeechToText implements SttEngine {
     );
 
     _initialized = true;
-    _available = ok && _speech.isAvailable && _speech.hasPermission;
+    final hasPermission = await _speech.hasPermission;
+    _available = ok && _speech.isAvailable && hasPermission;
     return _available;
   }
 
@@ -99,11 +89,13 @@ class SttEngineSpeechToText implements SttEngine {
             onResult?.call(SttPayload(transcript: res.recognizedWords));
           }
         },
-        partialResults: false,
-        cancelOnError: true,
-        listenMode: stt.ListenMode.confirmation,
         listenFor: const Duration(seconds: 45),
         pauseFor: const Duration(seconds: 3),
+        listenOptions: stt.SpeechListenOptions(
+          partialResults: false, // MVP: final only (safer, simpler)
+          cancelOnError: true,
+          listenMode: stt.ListenMode.confirmation,
+        ),
       );
       if (!ok) {
         _setBlocked();

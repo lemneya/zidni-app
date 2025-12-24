@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 import 'package:zidni_mobile/firebase_options.dart';
+import 'package:zidni_mobile/services/firestore_service.dart';
 import 'package:zidni_mobile/services/stt_engine.dart';
 import 'package:zidni_mobile/services/stt_engine_speech_to_text.dart';
 import 'package:zidni_mobile/zidni_shell.dart';
@@ -38,14 +40,19 @@ class _ZidniAppState extends State<ZidniApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Zidni',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+    return MultiProvider(
+      providers: [
+        Provider<FirestoreService>(create: (_) => FirestoreService()),
+      ],
+      child: MaterialApp(
+        title: 'Zidni',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        ),
+        home: ZidniShell(sttEngine: _sttEngine),
       ),
-      home: ZidniShell(sttEngine: _sttEngine),
     );
   }
 }
