@@ -1,12 +1,9 @@
-
 zidni_mobile/build/
-
 zidni_mobile/.dart_tool/
-
 zidni_mobile/android/local.properties
-
+*.dill
+*.filecache
 .env
-
 .vscode/
-
 vendor/
+package-lock.json
