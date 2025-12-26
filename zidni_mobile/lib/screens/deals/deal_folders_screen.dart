@@ -2,11 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/deal_folder.dart';
 import '../../services/firestore_service.dart';
+import '../../services/offline_capture_queue.dart';
 import 'deal_folder_detail.dart';
 import 'followup_queue_screen.dart';
 
-class DealFoldersScreen extends StatelessWidget {
+class DealFoldersScreen extends StatefulWidget {
   const DealFoldersScreen({Key? key}) : super(key: key);
+
+  @override
+  State<DealFoldersScreen> createState() => _DealFoldersScreenState();
+}
+
+class _DealFoldersScreenState extends State<DealFoldersScreen> {
+  int _pendingCount = 0;
+  bool _syncing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPendingCount();
+  }
+
+  Future<void> _loadPendingCount() async {
+    final count = await OfflineCaptureQueue.getPendingCount();
+    if (mounted) {
+      setState(() {
+        _pendingCount = count;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,6 +40,37 @@ class DealFoldersScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Deal Folders'),
         actions: [
+          // Pending uploads badge
+          if (_pendingCount > 0)
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.cloud_upload),
+                  tooltip: 'Pending uploads',
+                  onPressed: () => _showPendingUploadsSheet(context, firestoreService),
+                ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.orange,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$_pendingCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           IconButton(
             icon: const Icon(Icons.pending_actions),
             tooltip: 'Follow-up Queue',
@@ -54,6 +109,216 @@ class DealFoldersScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  void _showPendingUploadsSheet(BuildContext context, FirestoreService firestoreService) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Row(
+                children: [
+                  const Icon(Icons.cloud_off, color: Colors.orange, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pending Uploads',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '$_pendingCount capture${_pendingCount == 1 ? '' : 's'} waiting to sync',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+              
+              // Pending items list
+              FutureBuilder<List<PendingCapture>>(
+                future: OfflineCaptureQueue.getQueue(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('No pending captures'),
+                    );
+                  }
+                  final pending = snapshot.data!;
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: pending.length,
+                      itemBuilder: (context, index) {
+                        final item = pending[index];
+                        return ListTile(
+                          leading: const Icon(Icons.pending, color: Colors.orange),
+                          title: Text(item.folderName),
+                          subtitle: Text(
+                            item.transcript.length > 50
+                                ? '${item.transcript.substring(0, 50)}...'
+                                : item.transcript,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: Text(
+                            _formatTime(item.createdAt),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Retry button
+              ElevatedButton.icon(
+                icon: _syncing
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.sync),
+                label: Text(_syncing ? 'Syncing...' : 'Retry Now'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: _syncing
+                    ? null
+                    : () => _retryPendingUploads(context, firestoreService, setSheetState),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _retryPendingUploads(
+    BuildContext context,
+    FirestoreService firestoreService,
+    StateSetter setSheetState,
+  ) async {
+    setSheetState(() {
+      _syncing = true;
+    });
+    setState(() {
+      _syncing = true;
+    });
+
+    final queue = await OfflineCaptureQueue.getQueue();
+    int successCount = 0;
+    int failCount = 0;
+
+    // Process queue in reverse order (oldest first)
+    for (int i = 0; i < queue.length; i++) {
+      final capture = queue[i];
+      try {
+        await firestoreService.saveCaptureToFolder(
+          capture.folderId,
+          capture.transcript,
+        );
+        successCount++;
+        // Remove from queue after successful upload
+        await OfflineCaptureQueue.removeFromQueue(0); // Always remove first since we're processing in order
+      } catch (e) {
+        failCount++;
+        // Stop on first failure to preserve order
+        break;
+      }
+    }
+
+    // Reload pending count
+    await _loadPendingCount();
+
+    setSheetState(() {
+      _syncing = false;
+    });
+    setState(() {
+      _syncing = false;
+    });
+
+    if (!context.mounted) return;
+
+    // Show result
+    final messenger = ScaffoldMessenger.of(context);
+    if (successCount > 0 && failCount == 0) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('$successCount capture${successCount == 1 ? '' : 's'} synced successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      if (_pendingCount == 0) {
+        Navigator.pop(context); // Close sheet if all synced
+      }
+    } else if (failCount > 0) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('$successCount synced, $failCount failed - check connection'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Sync failed - check your connection'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _formatTime(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}h ago';
+    } else {
+      return '${diff.inDays}d ago';
+    }
   }
 
   Widget _buildFolderTile(BuildContext context, DealFolder folder) {
