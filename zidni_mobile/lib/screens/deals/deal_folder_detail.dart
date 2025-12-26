@@ -1,9 +1,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/deal_folder.dart';
-import '../models/gul_capture.dart';
-import '../services/firestore_service.dart';
+import '../../models/deal_folder.dart';
+import '../../models/gul_capture.dart';
+import '../../services/firestore_service.dart';
 
 class DealFolderDetailScreen extends StatelessWidget {
   final DealFolder folder;

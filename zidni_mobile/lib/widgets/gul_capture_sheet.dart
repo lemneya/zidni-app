@@ -46,6 +46,7 @@ class GulCaptureSheet extends StatelessWidget {
                 onPressed: () {
                   onSave(
                     GulCapture(
+                      id: '', // ID will be assigned by Firestore
                       transcript: transcript,
                       createdAt: DateTime.now(),
                     ),
