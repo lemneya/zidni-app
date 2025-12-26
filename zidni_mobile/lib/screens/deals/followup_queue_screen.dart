@@ -141,7 +141,7 @@ class _FollowupQueueScreenState extends State<FollowupQueueScreen> {
       child: ListTile(
         leading: _buildPriorityIndicator(folder.priority),
         title: Text(
-          folder.title,
+          folder.displayName,
           style: TextStyle(
             decoration: folder.followupDone ? TextDecoration.lineThrough : null,
             color: folder.followupDone ? Colors.grey : null,
@@ -152,8 +152,8 @@ class _FollowupQueueScreenState extends State<FollowupQueueScreen> {
           children: [
             if (folder.category != null)
               Text('Category: ${folder.category}'),
-            if (folder.booth != null)
-              Text('Booth/Hall: ${folder.booth}'),
+            if (folder.boothHall != null)
+              Text('Booth/Hall: ${folder.boothHall}'),
             if (folder.lastCaptureAt != null)
               Text(
                 'Last capture: ${_formatDate(folder.lastCaptureAt!)}',

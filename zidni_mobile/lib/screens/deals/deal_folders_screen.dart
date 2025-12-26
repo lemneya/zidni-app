@@ -59,12 +59,14 @@ class DealFoldersScreen extends StatelessWidget {
   Widget _buildFolderTile(BuildContext context, DealFolder folder) {
     return ListTile(
       leading: _buildPriorityIndicator(folder.priority),
-      title: Text(folder.title),
+      title: Text(folder.displayName),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (folder.category != null)
             Text('Category: ${folder.category}'),
+          if (folder.boothHall != null)
+            Text('Booth/Hall: ${folder.boothHall}'),
           Text('Created: ${_formatDate(folder.createdAt)}'),
         ],
       ),
@@ -110,7 +112,7 @@ class DealFoldersScreen extends StatelessWidget {
   }
 
   void _showCreateFolderDialog(BuildContext context, FirestoreService firestoreService) {
-    final titleController = TextEditingController();
+    final supplierController = TextEditingController();
     final boothController = TextEditingController();
     String? selectedCategory;
     String? selectedPriority;
@@ -127,10 +129,10 @@ class DealFoldersScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
-                      controller: titleController,
+                      controller: supplierController,
                       decoration: const InputDecoration(
-                        labelText: 'Folder title',
-                        hintText: 'e.g., Supplier ABC',
+                        labelText: 'Supplier Name (optional)',
+                        hintText: 'e.g., ABC Electronics Co.',
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -184,14 +186,21 @@ class DealFoldersScreen extends StatelessWidget {
                 TextButton(
                   child: const Text('Create'),
                   onPressed: () {
-                    if (titleController.text.isNotEmpty) {
+                    // At least one of supplierName, category, or boothHall should be provided
+                    if (supplierController.text.isNotEmpty || 
+                        selectedCategory != null || 
+                        boothController.text.isNotEmpty) {
                       firestoreService.createDealFolder(
-                        titleController.text,
-                        booth: boothController.text.isNotEmpty ? boothController.text : null,
+                        supplierName: supplierController.text.isNotEmpty ? supplierController.text : null,
+                        boothHall: boothController.text.isNotEmpty ? boothController.text : null,
                         category: selectedCategory,
                         priority: selectedPriority,
                       );
                       Navigator.of(context).pop();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please fill at least one field')),
+                      );
                     }
                   },
                 ),

@@ -39,28 +39,35 @@ class FirestoreService {
       query = query.where('followupDone', isEqualTo: false);
     }
     
+    // Order by lastCaptureAt (most recent action first), with null-safe client-side sort
     return query
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => DealFolder.fromFirestore(doc.id, doc.data()))
-            .toList());
+        .map((snapshot) {
+          final folders = snapshot.docs
+              .map((doc) => DealFolder.fromFirestore(doc.id, doc.data()))
+              .toList();
+          // Sort: folders with lastCaptureAt first (desc), then by createdAt (desc)
+          folders.sort((a, b) {
+            final aTime = a.lastCaptureAt ?? a.createdAt;
+            final bTime = b.lastCaptureAt ?? b.createdAt;
+            return bTime.compareTo(aTime);
+          });
+          return folders;
+        });
   }
 
-  Future<DocumentReference> createDealFolder(
-    String title, {
+  Future<DocumentReference> createDealFolder({
     String? supplierName,
-    String? booth,
+    String? boothHall,
     String? category,
     String? priority,
   }) {
     if (_uid == null) throw Exception("User not logged in");
     return _db.collection('deal_folders').add({
       'ownerUid': _uid,
-      'title': title,
       'createdAt': FieldValue.serverTimestamp(),
       'supplierName': supplierName,
-      'booth': booth,
+      'boothHall': boothHall,
       'mode': 'personal',
       'workspaceId': null,
       'category': category,

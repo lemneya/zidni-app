@@ -41,7 +41,7 @@ class _DealFolderDetailScreenState extends State<DealFolderDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.folder.title),
+        title: Text(widget.folder.displayName),
         actions: [
           IconButton(
             icon: Icon(widget.folder.followupDone ? Icons.check_circle : Icons.check_circle_outline),
@@ -64,7 +64,7 @@ class _DealFolderDetailScreenState extends State<DealFolderDetailScreen> {
                   const SizedBox(height: 8),
                   _buildInfoRow('Priority', widget.folder.priority ?? 'N/A'),
                   const SizedBox(height: 8),
-                  _buildInfoRow('Booth/Hall', widget.folder.booth ?? 'N/A'),
+                  _buildInfoRow('Booth/Hall', widget.folder.boothHall ?? 'N/A'),
                   const SizedBox(height: 8),
                   _buildInfoRow('Supplier', widget.folder.supplierName ?? 'N/A'),
                 ],
@@ -227,8 +227,8 @@ class _DealFolderDetailScreenState extends State<DealFolderDetailScreen> {
   String _generateArabicTemplate() {
     final category = widget.folder.category ?? 'غير محدد';
     final priority = widget.folder.priority ?? 'غير محدد';
-    final booth = widget.folder.booth ?? 'غير محدد';
-    final supplier = widget.folder.supplierName ?? widget.folder.title;
+    final boothHall = widget.folder.boothHall ?? 'غير محدد';
+    final supplier = widget.folder.supplierName ?? widget.folder.displayName;
     final transcript = _latestTranscript;
     
     final buffer = StringBuffer();
@@ -239,7 +239,7 @@ class _DealFolderDetailScreenState extends State<DealFolderDetailScreen> {
     buffer.writeln('المورد: $supplier');
     buffer.writeln('الفئة: $category');
     buffer.writeln('الأولوية: $priority');
-    buffer.writeln('الموقع: $booth');
+    buffer.writeln('الموقع: $boothHall');
     
     if (transcript != null && transcript.isNotEmpty) {
       buffer.writeln();
@@ -258,8 +258,8 @@ class _DealFolderDetailScreenState extends State<DealFolderDetailScreen> {
   String _generateChineseTemplate() {
     final category = widget.folder.category ?? '未指定';
     final priority = widget.folder.priority ?? '未指定';
-    final booth = widget.folder.booth ?? '未指定';
-    final supplier = widget.folder.supplierName ?? widget.folder.title;
+    final boothHall = widget.folder.boothHall ?? '未指定';
+    final supplier = widget.folder.supplierName ?? widget.folder.displayName;
     final transcript = _latestTranscript;
     
     final buffer = StringBuffer();
@@ -270,7 +270,7 @@ class _DealFolderDetailScreenState extends State<DealFolderDetailScreen> {
     buffer.writeln('供应商: $supplier');
     buffer.writeln('类别: $category');
     buffer.writeln('优先级: $priority');
-    buffer.writeln('展位: $booth');
+    buffer.writeln('展位: $boothHall');
     
     if (transcript != null && transcript.isNotEmpty) {
       buffer.writeln();
