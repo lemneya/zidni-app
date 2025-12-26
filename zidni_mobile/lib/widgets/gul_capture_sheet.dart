@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:zidni_mobile/models/deal_folder.dart';
 import 'package:zidni_mobile/models/gul_capture.dart';
 import 'package:zidni_mobile/services/firestore_service.dart';
+import 'package:zidni_mobile/services/last_folder_service.dart';
 import 'package:zidni_mobile/widgets/post_capture_actions_sheet.dart';
 
 class GulCaptureSheet extends StatefulWidget {
@@ -23,6 +24,27 @@ class GulCaptureSheet extends StatefulWidget {
 class _GulCaptureSheetState extends State<GulCaptureSheet> {
   DealFolder? _selectedFolder;
   bool _saving = false;
+  String? _lastFolderId;
+  String? _lastFolderName;
+  bool _loadingLastFolder = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastFolder();
+  }
+
+  Future<void> _loadLastFolder() async {
+    final lastId = await LastFolderService.getLastFolderId();
+    final lastName = await LastFolderService.getLastFolderName();
+    if (mounted) {
+      setState(() {
+        _lastFolderId = lastId;
+        _lastFolderName = lastName;
+        _loadingLastFolder = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +93,27 @@ class _GulCaptureSheetState extends State<GulCaptureSheet> {
             ),
           ),
           const SizedBox(height: 16),
+          
+          // Quick Save to Last Folder Button
+          if (!_loadingLastFolder && _lastFolderId != null && _lastFolderName != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.flash_on, size: 20),
+                  label: Text('Save to "$_lastFolderName"'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: _saving
+                      ? null
+                      : () => _quickSaveToLastFolder(context, firestoreService),
+                ),
+              ),
+            ),
           
           // Folder Selector
           const Text(
@@ -153,6 +196,66 @@ class _GulCaptureSheetState extends State<GulCaptureSheet> {
     );
   }
 
+  Future<void> _quickSaveToLastFolder(BuildContext context, FirestoreService firestoreService) async {
+    if (_lastFolderId == null) return;
+    
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final folderId = _lastFolderId!;
+    final folderName = _lastFolderName!;
+    final transcript = widget.transcript;
+    
+    setState(() {
+      _saving = true;
+    });
+
+    try {
+      // Save capture to Firestore
+      await firestoreService.saveCaptureToFolder(folderId, transcript);
+
+      // Call legacy onSave callback if provided
+      widget.onSave?.call(
+        GulCapture(
+          transcript: transcript,
+          createdAt: DateTime.now(),
+        ),
+      );
+
+      if (!mounted) return;
+
+      // Close the capture sheet
+      navigator.pop();
+
+      // Show post-capture actions sheet with a placeholder folder
+      if (context.mounted) {
+        // Create a minimal DealFolder for the post-capture sheet
+        final folder = DealFolder(
+          id: folderId,
+          ownerUid: '',
+          createdAt: DateTime.now(),
+          mode: 'personal',
+          supplierName: folderName,
+        );
+        showPostCaptureActionsSheet(
+          context,
+          folder: folder,
+          transcript: transcript,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error saving capture: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      setState(() {
+        _saving = false;
+      });
+    }
+  }
+
   Future<void> _saveCapture(BuildContext context, FirestoreService firestoreService) async {
     if (_selectedFolder == null) return;
     
@@ -171,6 +274,9 @@ class _GulCaptureSheetState extends State<GulCaptureSheet> {
         folder.id,
         transcript,
       );
+
+      // Save as last used folder
+      await LastFolderService.setLastFolder(folder.id, folder.displayName);
 
       // Call legacy onSave callback if provided
       widget.onSave?.call(
