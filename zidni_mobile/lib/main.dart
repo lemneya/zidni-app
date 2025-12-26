@@ -5,7 +5,7 @@ import 'package:zidni_mobile/firebase_options.dart';
 import 'package:zidni_mobile/services/firestore_service.dart';
 import 'package:zidni_mobile/services/stt_engine.dart';
 import 'package:zidni_mobile/services/stt_engine_speech_to_text.dart';
-import 'package:zidni_mobile/shell.dart';
+import 'package:zidni_mobile/zidni_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
