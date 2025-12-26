@@ -45,7 +45,8 @@ class SttEngineSpeechToText implements SttEngine {
     );
 
     _initialized = true;
-    _available = ok && _speech.isAvailable && _speech.hasPermission;
+    final hasPermission = await _speech.hasPermission;
+    _available = ok && _speech.isAvailable && hasPermission;
     return _available;
   }
 

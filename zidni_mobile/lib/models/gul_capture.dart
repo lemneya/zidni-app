@@ -2,12 +2,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GulCapture {
-  final String id;
+  final String? id;
   final String transcript;
   final DateTime createdAt;
 
   GulCapture({
-    required this.id,
+    this.id,
     required this.transcript,
     required this.createdAt,
   });
