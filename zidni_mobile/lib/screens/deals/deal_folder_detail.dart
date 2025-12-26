@@ -67,6 +67,22 @@ class _DealFolderDetailScreenState extends State<DealFolderDetailScreen> {
                   _buildInfoRow('Booth/Hall', widget.folder.boothHall ?? 'N/A'),
                   const SizedBox(height: 8),
                   _buildInfoRow('Supplier', widget.folder.supplierName ?? 'N/A'),
+                  const SizedBox(height: 16),
+                  
+                  // Copy Proof Block Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.content_copy),
+                      label: const Text('Copy Proof Block'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: _loadingTranscript ? null : () => _copyProofBlock(context),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -284,6 +300,34 @@ class _DealFolderDetailScreenState extends State<DealFolderDetailScreen> {
     buffer.write('此致敬礼');
     
     return buffer.toString();
+  }
+
+  /// Generate and copy a compact proof block with key folder info + latest transcript
+  void _copyProofBlock(BuildContext context) {
+    final buffer = StringBuffer();
+    buffer.writeln('📋 ${widget.folder.displayName}');
+    if (widget.folder.category != null) {
+      buffer.writeln('Category: ${widget.folder.category}');
+    }
+    if (widget.folder.priority != null) {
+      buffer.writeln('Priority: ${widget.folder.priority}');
+    }
+    if (widget.folder.boothHall != null) {
+      buffer.writeln('Booth/Hall: ${widget.folder.boothHall}');
+    }
+    if (_latestTranscript != null && _latestTranscript!.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('Notes:');
+      buffer.writeln(_latestTranscript);
+    }
+    
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Proof block copied to clipboard'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   void _copyToClipboard(BuildContext context, String text) {
