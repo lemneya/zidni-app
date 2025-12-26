@@ -7,3 +7,4 @@ zidni_mobile/android/local.properties
 .vscode/
 vendor/
 package-lock.json
+node_modules/
