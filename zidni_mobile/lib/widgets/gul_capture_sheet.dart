@@ -5,6 +5,7 @@ import 'package:zidni_mobile/models/deal_folder.dart';
 import 'package:zidni_mobile/models/gul_capture.dart';
 import 'package:zidni_mobile/services/firestore_service.dart';
 import 'package:zidni_mobile/services/last_folder_service.dart';
+import 'package:zidni_mobile/services/offline_capture_queue.dart';
 import 'package:zidni_mobile/widgets/post_capture_actions_sheet.dart';
 
 class GulCaptureSheet extends StatefulWidget {
@@ -243,16 +244,33 @@ class _GulCaptureSheetState extends State<GulCaptureSheet> {
         );
       }
     } catch (e) {
+      // Network error - save to offline queue
+      await OfflineCaptureQueue.addToQueue(PendingCapture(
+        folderId: folderId,
+        folderName: folderName,
+        transcript: transcript,
+        createdAt: DateTime.now(),
+      ));
+
       if (!mounted) return;
+
+      // Close the capture sheet
+      navigator.pop();
+
+      // Show offline saved message
       messenger.showSnackBar(
-        SnackBar(
-          content: Text('Error saving capture: $e'),
-          backgroundColor: Colors.red,
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.cloud_off, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text('Saved offline - will sync when online'),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
-      setState(() {
-        _saving = false;
-      });
     }
   }
 
@@ -300,16 +318,36 @@ class _GulCaptureSheetState extends State<GulCaptureSheet> {
         );
       }
     } catch (e) {
+      // Network error - save to offline queue
+      await OfflineCaptureQueue.addToQueue(PendingCapture(
+        folderId: folder.id,
+        folderName: folder.displayName,
+        transcript: transcript,
+        createdAt: DateTime.now(),
+      ));
+
+      // Still save as last used folder
+      await LastFolderService.setLastFolder(folder.id, folder.displayName);
+
       if (!mounted) return;
+
+      // Close the capture sheet
+      navigator.pop();
+
+      // Show offline saved message
       messenger.showSnackBar(
-        SnackBar(
-          content: Text('Error saving capture: $e'),
-          backgroundColor: Colors.red,
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.cloud_off, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text('Saved offline - will sync when online'),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
-      setState(() {
-        _saving = false;
-      });
     }
   }
 }
