@@ -5,10 +5,35 @@ import '../../models/deal_folder.dart';
 import '../../models/gul_capture.dart';
 import '../../services/firestore_service.dart';
 
-class DealFolderDetailScreen extends StatelessWidget {
+class DealFolderDetailScreen extends StatefulWidget {
   final DealFolder folder;
 
   const DealFolderDetailScreen({Key? key, required this.folder}) : super(key: key);
+
+  @override
+  State<DealFolderDetailScreen> createState() => _DealFolderDetailScreenState();
+}
+
+class _DealFolderDetailScreenState extends State<DealFolderDetailScreen> {
+  String? _latestTranscript;
+  bool _loadingTranscript = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLatestTranscript();
+  }
+
+  Future<void> _loadLatestTranscript() async {
+    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    final capture = await firestoreService.getLatestCapture(widget.folder.id);
+    if (mounted) {
+      setState(() {
+        _latestTranscript = capture?.transcript;
+        _loadingTranscript = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,11 +41,11 @@ class DealFolderDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(folder.title),
+        title: Text(widget.folder.title),
         actions: [
           IconButton(
-            icon: Icon(folder.followupDone ? Icons.check_circle : Icons.check_circle_outline),
-            tooltip: folder.followupDone ? 'Mark as needs follow-up' : 'Mark as done',
+            icon: Icon(widget.folder.followupDone ? Icons.check_circle : Icons.check_circle_outline),
+            tooltip: widget.folder.followupDone ? 'Mark as needs follow-up' : 'Mark as done',
             onPressed: () => _toggleFollowupDone(context, firestoreService),
           ),
         ],
@@ -35,13 +60,13 @@ class DealFolderDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow('Category', folder.category ?? 'N/A'),
+                  _buildInfoRow('Category', widget.folder.category ?? 'N/A'),
                   const SizedBox(height: 8),
-                  _buildInfoRow('Priority', folder.priority ?? 'N/A'),
+                  _buildInfoRow('Priority', widget.folder.priority ?? 'N/A'),
                   const SizedBox(height: 8),
-                  _buildInfoRow('Booth/Hall', folder.booth ?? 'N/A'),
+                  _buildInfoRow('Booth/Hall', widget.folder.booth ?? 'N/A'),
                   const SizedBox(height: 8),
-                  _buildInfoRow('Supplier', folder.supplierName ?? 'N/A'),
+                  _buildInfoRow('Supplier', widget.folder.supplierName ?? 'N/A'),
                 ],
               ),
             ),
@@ -63,7 +88,7 @@ class DealFolderDetailScreen extends StatelessWidget {
             SizedBox(
               height: 300,
               child: StreamBuilder<List<GulCapture>>(
-                stream: firestoreService.getCapturesForFolder(folder.id),
+                stream: firestoreService.getCapturesForFolder(widget.folder.id),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -72,6 +97,18 @@ class DealFolderDetailScreen extends StatelessWidget {
                     return const Center(child: Text('No captures in this folder.'));
                   }
                   final captures = snapshot.data!;
+                  
+                  // Update latest transcript if captures changed
+                  if (captures.isNotEmpty && _latestTranscript != captures.first.transcript) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {
+                          _latestTranscript = captures.first.transcript;
+                        });
+                      }
+                    });
+                  }
+                  
                   return ListView.builder(
                     itemCount: captures.length,
                     itemBuilder: (context, index) {
@@ -121,22 +158,24 @@ class DealFolderDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           
-          // Arabic Template
-          _buildTemplateCard(
-            context: context,
-            title: 'Arabic Template',
-            template: _generateArabicTemplate(),
-            firestoreService: firestoreService,
-          ),
-          const SizedBox(height: 12),
-          
-          // Chinese Template
-          _buildTemplateCard(
-            context: context,
-            title: 'Chinese Template',
-            template: _generateChineseTemplate(),
-            firestoreService: firestoreService,
-          ),
+          if (_loadingTranscript)
+            const Center(child: CircularProgressIndicator())
+          else ...[
+            // Arabic Template
+            _buildTemplateCard(
+              context: context,
+              title: 'Arabic Template',
+              template: _generateArabicTemplate(),
+            ),
+            const SizedBox(height: 12),
+            
+            // Chinese Template
+            _buildTemplateCard(
+              context: context,
+              title: 'Chinese Template',
+              template: _generateChineseTemplate(),
+            ),
+          ],
         ],
       ),
     );
@@ -146,7 +185,6 @@ class DealFolderDetailScreen extends StatelessWidget {
     required BuildContext context,
     required String title,
     required String template,
-    required FirestoreService firestoreService,
   }) {
     return Card(
       child: Padding(
@@ -187,43 +225,65 @@ class DealFolderDetailScreen extends StatelessWidget {
   }
 
   String _generateArabicTemplate() {
-    final category = folder.category ?? 'غير محدد';
-    final priority = folder.priority ?? 'غير محدد';
-    final booth = folder.booth ?? 'غير محدد';
-    final supplier = folder.supplierName ?? folder.title;
+    final category = widget.folder.category ?? 'غير محدد';
+    final priority = widget.folder.priority ?? 'غير محدد';
+    final booth = widget.folder.booth ?? 'غير محدد';
+    final supplier = widget.folder.supplierName ?? widget.folder.title;
+    final transcript = _latestTranscript;
     
-    return '''السلام عليكم،
-
-شكراً لكم على اللقاء في المعرض.
-
-المورد: $supplier
-الفئة: $category
-الأولوية: $priority
-الموقع: $booth
-
-نتطلع للتعاون معكم.
-
-مع أطيب التحيات''';
+    final buffer = StringBuffer();
+    buffer.writeln('السلام عليكم،');
+    buffer.writeln();
+    buffer.writeln('شكراً لكم على اللقاء في المعرض.');
+    buffer.writeln();
+    buffer.writeln('المورد: $supplier');
+    buffer.writeln('الفئة: $category');
+    buffer.writeln('الأولوية: $priority');
+    buffer.writeln('الموقع: $booth');
+    
+    if (transcript != null && transcript.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('ملاحظات من اللقاء:');
+      buffer.writeln(transcript);
+    }
+    
+    buffer.writeln();
+    buffer.writeln('نتطلع للتعاون معكم.');
+    buffer.writeln();
+    buffer.write('مع أطيب التحيات');
+    
+    return buffer.toString();
   }
 
   String _generateChineseTemplate() {
-    final category = folder.category ?? '未指定';
-    final priority = folder.priority ?? '未指定';
-    final booth = folder.booth ?? '未指定';
-    final supplier = folder.supplierName ?? folder.title;
+    final category = widget.folder.category ?? '未指定';
+    final priority = widget.folder.priority ?? '未指定';
+    final booth = widget.folder.booth ?? '未指定';
+    final supplier = widget.folder.supplierName ?? widget.folder.title;
+    final transcript = _latestTranscript;
     
-    return '''您好，
-
-感谢您在展会上的会面。
-
-供应商: $supplier
-类别: $category
-优先级: $priority
-展位: $booth
-
-期待与您合作。
-
-此致敬礼''';
+    final buffer = StringBuffer();
+    buffer.writeln('您好，');
+    buffer.writeln();
+    buffer.writeln('感谢您在展会上的会面。');
+    buffer.writeln();
+    buffer.writeln('供应商: $supplier');
+    buffer.writeln('类别: $category');
+    buffer.writeln('优先级: $priority');
+    buffer.writeln('展位: $booth');
+    
+    if (transcript != null && transcript.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('会议记录:');
+      buffer.writeln(transcript);
+    }
+    
+    buffer.writeln();
+    buffer.writeln('期待与您合作。');
+    buffer.writeln();
+    buffer.write('此致敬礼');
+    
+    return buffer.toString();
   }
 
   void _copyToClipboard(BuildContext context, String text) {
@@ -237,9 +297,9 @@ class DealFolderDetailScreen extends StatelessWidget {
   }
 
   void _toggleFollowupDone(BuildContext context, FirestoreService firestoreService) async {
-    final newValue = !folder.followupDone;
+    final newValue = !widget.folder.followupDone;
     final messenger = ScaffoldMessenger.of(context);
-    await firestoreService.updateFollowupDone(folder.id, newValue);
+    await firestoreService.updateFollowupDone(widget.folder.id, newValue);
     messenger.showSnackBar(
       SnackBar(
         content: Text(newValue ? 'Marked as done' : 'Marked as needs follow-up'),
