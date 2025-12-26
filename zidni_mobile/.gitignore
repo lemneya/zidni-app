@@ -1,0 +1,36 @@
+/build/
+/.dart_tool/
+*.local.properties
+/ios/Pods/
+/ios/Podfile.lock
+/ios/.symlinks/
+/ios/Flutter/App.framework
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+/ios/Runner/GeneratedPluginRegistrant.h
+/ios/Runner/GeneratedPluginRegistrant.m
+/android/app/build/
+/android/.gradle/
+/android/gradle/
+/android/gradlew
+/android/gradlew.bat
+/android/local.properties
+/android/key.properties
+
+# Rider files
+.idea
+*.iml
+
+# VS Code files
+.vscode/
+
+# Other
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+analysis_options.yaml
+/lib/firebase_options.dart
+/ios/Flutter/ephemeral/
+/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java

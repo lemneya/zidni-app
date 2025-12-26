@@ -1,24 +1,32 @@
-*.log
-.DS_Store
+# Build artifacts
+zidni_mobile/build/
+zidni_mobile/.dart_tool/
+zidni_mobile/android/local.properties
+*.dill
+*.filecache
+
+# Environment and IDE
 .env
-.env.backup
-.env.production
-.phpactor.json
-.phpunit.result.cache
-/.fleet
-/.idea
-/.nova
-/.phpunit.cache
-/.vscode
-/.zed
-/auth.json
-/node_modules
-/public/build
-/public/hot
-/public/storage
-/storage/*.key
-/storage/pail
-/vendor
-Homestead.json
-Homestead.yaml
-Thumbs.db
+.vscode/
+.idx/
+
+# Dependencies
+vendor/
+package-lock.json
+node_modules/
+
+# Firebase
+firebase-debug.log
+zidni_mobile/lib/firebase_options.dart
+
+# Flutter generated files
+zidni_mobile/pubspec.lock
+zidni_mobile/analysis_options.yaml
+zidni_mobile/ios/Flutter/ephemeral/
+zidni_mobile/ios/Flutter/Generated.xcconfig
+zidni_mobile/ios/Flutter/flutter_export_environment.sh
+zidni_mobile/ios/Runner/GeneratedPluginRegistrant.*
+zidni_mobile/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# Duplicate blueprints (keep root only)
+zidni_mobile/blueprint.md
