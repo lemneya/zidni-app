@@ -1,10 +1,32 @@
+# Build artifacts
 zidni_mobile/build/
 zidni_mobile/.dart_tool/
 zidni_mobile/android/local.properties
 *.dill
 *.filecache
+
+# Environment and IDE
 .env
 .vscode/
+.idx/
+
+# Dependencies
 vendor/
 package-lock.json
 node_modules/
+
+# Firebase
+firebase-debug.log
+zidni_mobile/lib/firebase_options.dart
+
+# Flutter generated files
+zidni_mobile/pubspec.lock
+zidni_mobile/analysis_options.yaml
+zidni_mobile/ios/Flutter/ephemeral/
+zidni_mobile/ios/Flutter/Generated.xcconfig
+zidni_mobile/ios/Flutter/flutter_export_environment.sh
+zidni_mobile/ios/Runner/GeneratedPluginRegistrant.*
+zidni_mobile/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# Duplicate blueprints (keep root only)
+zidni_mobile/blueprint.md

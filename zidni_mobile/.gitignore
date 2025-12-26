@@ -30,3 +30,7 @@
 .flutter-plugins
 .flutter-plugins-dependencies
 pubspec.lock
+analysis_options.yaml
+/lib/firebase_options.dart
+/ios/Flutter/ephemeral/
+/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
