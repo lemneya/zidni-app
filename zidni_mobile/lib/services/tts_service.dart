@@ -109,9 +109,17 @@ class TtsService {
       case 'ar':
         return 'ar-SA'; // Arabic (Saudi Arabia)
       case 'zh':
+      case 'zh-cn':
         return 'zh-CN'; // Chinese (Simplified)
       case 'en':
-        return 'en-US';
+      case 'en-us':
+        return 'en-US'; // English (US)
+      case 'tr':
+      case 'tr-tr':
+        return 'tr-TR'; // Turkish (Turkey)
+      case 'es':
+      case 'es-es':
+        return 'es-ES'; // Spanish (Spain)
       default:
         return langCode;
     }

@@ -5,8 +5,8 @@ abstract class TranslationService {
   /// Translate text from source language to target language
   /// 
   /// [text] - The text to translate
-  /// [fromLang] - Source language code: "ar" or "zh"
-  /// [toLang] - Target language code: "ar" or "zh"
+  /// [fromLang] - Source language code: "ar", "zh", "en", "tr", "es"
+  /// [toLang] - Target language code: "ar", "zh", "en", "tr", "es"
   /// 
   /// Returns the translated text
   Future<String> translate({
@@ -16,11 +16,20 @@ abstract class TranslationService {
   });
 }
 
-/// Stub implementation for UI testing (Gate #12)
+/// Stub implementation for UI testing (Gate #12-13)
 /// 
 /// Returns placeholder translations that indicate the translation would happen.
 /// No external API calls in this gate.
 class StubTranslationService implements TranslationService {
+  /// Language code to prefix mapping
+  static const Map<String, String> _prefixes = {
+    'ar': '（عربي）',
+    'zh': '（中文）',
+    'en': '(English)',
+    'tr': '(Türkçe)',
+    'es': '(Español)',
+  };
+  
   @override
   Future<String> translate({
     required String text,
@@ -30,16 +39,9 @@ class StubTranslationService implements TranslationService {
     // Simulate network delay
     await Future.delayed(const Duration(milliseconds: 500));
     
-    // Stub behavior per spec:
-    // If from=ar, to=zh => return （中文）$text
-    // If from=zh, to=ar => return （عربي）$text
-    if (fromLang == 'ar' && toLang == 'zh') {
-      return '（中文）$text';
-    } else if (fromLang == 'zh' && toLang == 'ar') {
-      return '（عربي）$text';
-    }
+    // Get prefix for target language
+    final prefix = _prefixes[toLang] ?? '[$toLang]';
     
-    // Fallback
-    return '[$toLang] $text';
+    return '$prefix $text';
   }
 }
