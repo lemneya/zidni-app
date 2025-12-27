@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:zidni_mobile/services/stt_engine.dart';
 import 'package:zidni_mobile/services/translation_service.dart';
 import 'package:zidni_mobile/services/tts_service.dart';
+import 'package:zidni_mobile/services/intro_message_service.dart';
 
 /// Turn language enum (Arabic or Target)
 enum TurnLang { ar, target }
@@ -101,6 +102,7 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
   // Services
   final TranslationService _translationService = StubTranslationService();
   final TtsService _ttsService = TtsService();
+  late final IntroMessageService _introService;
   
   // Pulse animation
   late AnimationController _pulseController;
@@ -110,8 +112,9 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
   void initState() {
     super.initState();
     
-    // Initialize TTS
+    // Initialize TTS and intro service
     _ttsService.init();
+    _introService = IntroMessageService(_ttsService);
     
     // Set up STT callback
     widget.sttEngine.onResult = _onSttPayload;
@@ -259,6 +262,9 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                   textAlign: TextAlign.center,
                 ),
               ),
+              
+              // Intro message buttons row
+              _buildIntroButtonsRow(),
               
               // Two big buttons
               Padding(
@@ -618,6 +624,92 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+  
+  /// Build the intro message buttons row
+  Widget _buildIntroButtonsRow() {
+    final isDisabled = _recordingLang != null;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Speak intro button
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: isDisabled
+                      ? null
+                      : () async {
+                          await _introService.speak(_selectedTarget);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('تم تشغيل الرسالة'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        },
+                  icon: const Text('🗣️'),
+                  label: const Text('رسالة افتتاحية'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDisabled
+                        ? Colors.grey.withOpacity(0.3)
+                        : Colors.teal.withOpacity(0.6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Copy intro button
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: isDisabled
+                      ? null
+                      : () async {
+                          await _introService.copyToClipboard(_selectedTarget);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('تم نسخ الرسالة'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        },
+                  icon: const Text('📋'),
+                  label: const Text('نسخ الرسالة'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDisabled
+                        ? Colors.grey.withOpacity(0.3)
+                        : Colors.orange.withOpacity(0.6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'اضغطها مرة واحدة قبل البدء',
+            style: TextStyle(
+              color: Colors.white38,
+              fontSize: 11,
+            ),
+          ),
+        ],
       ),
     );
   }
