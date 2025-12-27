@@ -3,6 +3,8 @@ import 'package:zidni_mobile/services/stt_engine.dart';
 import 'package:zidni_mobile/services/translation_service.dart';
 import 'package:zidni_mobile/services/tts_service.dart';
 import 'package:zidni_mobile/services/intro_message_service.dart';
+import 'package:zidni_mobile/services/conversation_prefs_service.dart';
+import 'package:zidni_mobile/services/location_country_service.dart';
 
 /// Turn language enum (Arabic or Target)
 enum TurnLang { ar, target }
@@ -56,12 +58,22 @@ extension TargetLangExtension on TargetLang {
       case TargetLang.es: return 'Español';
     }
   }
+  
+  /// Hand-the-phone instruction text
+  String get handoffInstruction {
+    switch (this) {
+      case TargetLang.zh: return '请现在说话。句子短一点。';
+      case TargetLang.en: return 'Please speak now. Keep it short.';
+      case TargetLang.tr: return 'Lütfen şimdi konuşun. Kısa cümlelerle.';
+      case TargetLang.es: return 'Habla ahora, por favor. Frases cortas.';
+    }
+  }
 }
 
 /// A single turn in the conversation
 class TurnItem {
   final TurnLang from;
-  final TargetLang target; // The target language for this turn
+  final TargetLang target;
   final String transcript;
   final String translation;
   final DateTime at;
@@ -76,8 +88,6 @@ class TurnItem {
 }
 
 /// Conversation Mode Screen for AR ⇄ Multi-target turn-taking
-/// 
-/// Entry point: ZidniAppBar → Ravigh icon
 class ConversationModeScreen extends StatefulWidget {
   final SttEngine sttEngine;
   
@@ -94,15 +104,24 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     with SingleTickerProviderStateMixin {
   
   // State machine variables
-  TurnLang? _recordingLang; // null when not recording
-  TurnLang _nextTurn = TurnLang.ar; // default start
-  TargetLang _selectedTarget = TargetLang.zh; // default target language
-  final List<TurnItem> _turns = []; // latest first
+  TurnLang? _recordingLang;
+  TurnLang _nextTurn = TurnLang.ar;
+  TargetLang _selectedTarget = TargetLang.zh;
+  final List<TurnItem> _turns = [];
+  
+  // Gate #15: New state variables
+  bool _handoffMode = false;
+  bool _useLocationDefault = false;
+  bool _loudMode = false;
+  String? _detectedCountryCode;
+  bool _locationAutoApplied = false;
   
   // Services
   final TranslationService _translationService = StubTranslationService();
   final TtsService _ttsService = TtsService();
   late final IntroMessageService _introService;
+  final ConversationPrefsService _prefsService = ConversationPrefsService();
+  final LocationCountryService _locationService = LocationCountryService();
   
   // Pulse animation
   late AnimationController _pulseController;
@@ -128,6 +147,42 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
     _pulseController.repeat(reverse: true);
+    
+    // Load preferences
+    _loadPreferences();
+  }
+  
+  Future<void> _loadPreferences() async {
+    await _prefsService.init();
+    setState(() {
+      _useLocationDefault = _prefsService.useLocationDefault;
+      _loudMode = _prefsService.loudMode;
+      _selectedTarget = _prefsService.lastSelectedTarget;
+      _ttsService.setLoudMode(_loudMode);
+    });
+    
+    // Apply location-based default if enabled
+    if (_useLocationDefault) {
+      await _applyLocationDefault();
+    }
+  }
+  
+  Future<void> _applyLocationDefault() async {
+    final countryCode = await _locationService.getCountryCode();
+    if (countryCode == null) return;
+    
+    // Only apply if country changed or first open
+    final lastCountry = _prefsService.lastCountryApplied;
+    if (countryCode != lastCountry) {
+      final target = _locationService.getTargetForCountry(countryCode);
+      setState(() {
+        _detectedCountryCode = countryCode;
+        _selectedTarget = target;
+        _locationAutoApplied = true;
+      });
+      await _prefsService.setLastCountryApplied(countryCode);
+      await _prefsService.setLastSelectedTarget(target);
+    }
   }
   
   @override
@@ -145,24 +200,20 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     final from = _recordingLang!;
     final to = from == TurnLang.ar ? TurnLang.target : TurnLang.ar;
     
-    // Stop listening
     await widget.sttEngine.stopListening();
     
-    // Determine translation codes
     final fromCode = from == TurnLang.ar ? 'ar' : _selectedTarget.code;
     final toCode = to == TurnLang.ar ? 'ar' : _selectedTarget.code;
     
-    // Translate
     final translation = await _translationService.translate(
       text: transcript,
       fromLang: fromCode,
       toLang: toCode,
     );
     
-    // Create turn item with current target language
     final turnItem = TurnItem(
       from: from,
-      target: _selectedTarget, // Save the target language with the turn
+      target: _selectedTarget,
       transcript: transcript,
       translation: translation,
       at: DateTime.now(),
@@ -170,20 +221,22 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     
     setState(() {
       _turns.insert(0, turnItem);
-      _nextTurn = to; // opposite of from
-      _recordingLang = null; // done recording
+      _nextTurn = to;
+      _recordingLang = null;
+      // Exit handoff mode after recording
+      if (_handoffMode) {
+        _handoffMode = false;
+      }
     });
   }
   
-  /// Start recording for a specific language
   Future<void> _startRecording(TurnLang lang) async {
-    if (_recordingLang != null) return; // already recording
+    if (_recordingLang != null) return;
     
     setState(() {
       _recordingLang = lang;
     });
     
-    // Initialize and start STT
     final initialized = await widget.sttEngine.initialize();
     if (!initialized) {
       setState(() {
@@ -200,30 +253,79 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     await widget.sttEngine.startListening();
   }
   
-  /// Stop recording manually
   Future<void> _stopRecording() async {
     if (_recordingLang == null) return;
     await widget.sttEngine.stopListening();
   }
   
-  /// Speak Arabic text for a turn
   Future<void> _speakAr(TurnItem turn) async {
     await _ttsService.stop();
-    // Speak Arabic: if turn is from AR, speak transcript; else speak translation
     final text = turn.from == TurnLang.ar ? turn.transcript : turn.translation;
     await _ttsService.speak(text, 'ar');
   }
   
-  /// Speak target language text for a turn
   Future<void> _speakTarget(TurnItem turn) async {
     await _ttsService.stop();
-    // Speak target: if turn is from target, speak transcript; else speak translation
     final text = turn.from == TurnLang.target ? turn.transcript : turn.translation;
     await _ttsService.speak(text, turn.target.ttsLocale);
   }
   
+  Future<void> _toggleLocationDefault(bool value) async {
+    if (value && !await _locationService.hasPermission()) {
+      final granted = await _locationService.requestPermission();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('لم يتم منح إذن الموقع')),
+          );
+        }
+        return;
+      }
+    }
+    
+    setState(() {
+      _useLocationDefault = value;
+      if (!value) {
+        _locationAutoApplied = false;
+        _detectedCountryCode = null;
+      }
+    });
+    await _prefsService.setUseLocationDefault(value);
+    
+    if (value) {
+      await _applyLocationDefault();
+    }
+  }
+  
+  Future<void> _toggleLoudMode(bool value) async {
+    setState(() {
+      _loudMode = value;
+      _ttsService.setLoudMode(value);
+    });
+    await _prefsService.setLoudMode(value);
+  }
+  
+  void _enterHandoffMode() {
+    if (_recordingLang != null) return;
+    setState(() {
+      _handoffMode = true;
+    });
+  }
+  
+  void _exitHandoffMode() {
+    if (_recordingLang != null) return;
+    setState(() {
+      _handoffMode = false;
+    });
+  }
+  
   @override
   Widget build(BuildContext context) {
+    // Show handoff mode if active
+    if (_handoffMode) {
+      return _buildHandoffScreen();
+    }
+    
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -247,6 +349,13 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
         body: SafeArea(
           child: Column(
             children: [
+              // Settings row (location + loud mode)
+              _buildSettingsRow(),
+              
+              // Location auto-selection chip
+              if (_locationAutoApplied && _detectedCountryCode != null)
+                _buildLocationChip(),
+              
               // Language selector
               _buildLanguageSelector(),
               
@@ -266,12 +375,14 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
               // Intro message buttons row
               _buildIntroButtonsRow(),
               
+              // Hand-the-phone button
+              _buildHandoffButton(),
+              
               // Two big buttons
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    // Arabic button
                     Expanded(
                       child: _buildTurnButton(
                         lang: TurnLang.ar,
@@ -280,7 +391,6 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                       ),
                     ),
                     const SizedBox(width: 16),
-                    // Target button
                     Expanded(
                       child: _buildTurnButton(
                         lang: TurnLang.target,
@@ -303,6 +413,275 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                           return _buildTurnCard(_turns[index]);
                         },
                       ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSettingsRow() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          // Location toggle
+          Expanded(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.location_on, color: Colors.white54, size: 16),
+                const SizedBox(width: 4),
+                const Text(
+                  'موقع',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                Switch(
+                  value: _useLocationDefault,
+                  onChanged: _recordingLang == null ? _toggleLocationDefault : null,
+                  activeColor: Colors.blue,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ],
+            ),
+          ),
+          // Loud mode toggle
+          Expanded(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.volume_up, color: Colors.white54, size: 16),
+                const SizedBox(width: 4),
+                const Text(
+                  'صوت عالي',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                Switch(
+                  value: _loudMode,
+                  onChanged: _recordingLang == null ? _toggleLoudMode : null,
+                  activeColor: Colors.orange,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildLocationChip() {
+    final countryName = _locationService.getCountryName(_detectedCountryCode);
+    final targetName = _selectedTarget.arabicName;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.blue.withOpacity(0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('📍', style: TextStyle(fontSize: 14)),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'تم اختيار $targetName لأنك في $countryName',
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                // Focus on language selector (scroll to it or highlight)
+                setState(() {
+                  _locationAutoApplied = false;
+                });
+              },
+              child: const Text(
+                'تغيير',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () async {
+                await _toggleLocationDefault(false);
+              },
+              child: const Text(
+                'إيقاف',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildHandoffButton() {
+    final isDisabled = _recordingLang != null;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ElevatedButton.icon(
+        onPressed: isDisabled ? null : _enterHandoffMode,
+        icon: const Text('📱', style: TextStyle(fontSize: 16)),
+        label: const Text('أعطِ الهاتف للطرف الآخر'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isDisabled
+              ? Colors.grey.withOpacity(0.3)
+              : Colors.purple.withOpacity(0.4),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildHandoffScreen() {
+    return Directionality(
+      textDirection: TextDirection.ltr, // LTR for target language user
+      child: Scaffold(
+        backgroundColor: const Color(0xFF1A1A2E),
+        body: SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Target language flag
+              Text(
+                _selectedTarget.flag,
+                style: const TextStyle(fontSize: 80),
+              ),
+              const SizedBox(height: 24),
+              
+              // Instruction text in target language
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  _selectedTarget.handoffInstruction,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 48),
+              
+              // Big start button
+              GestureDetector(
+                onTapDown: (_) => _startRecording(TurnLang.target),
+                onTapUp: (_) => _stopRecording(),
+                onTapCancel: _stopRecording,
+                child: AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    final scale = _recordingLang == TurnLang.target
+                        ? _pulseAnimation.value
+                        : 1.0;
+                    return Transform.scale(
+                      scale: scale,
+                      child: Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _recordingLang == TurnLang.target
+                              ? Colors.red
+                              : Colors.green,
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_recordingLang == TurnLang.target
+                                      ? Colors.red
+                                      : Colors.green)
+                                  .withOpacity(0.5),
+                              blurRadius: 20,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            _recordingLang == TurnLang.target ? '🎤' : 'ابدأ',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Recording indicator
+              if (_recordingLang == TurnLang.target)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _selectedTarget == TargetLang.zh
+                          ? '正在录音...'
+                          : _selectedTarget == TargetLang.tr
+                              ? 'Kaydediliyor...'
+                              : _selectedTarget == TargetLang.es
+                                  ? 'Grabando...'
+                                  : 'Recording...',
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              
+              const Spacer(),
+              
+              // Back button (Arabic)
+              Directionality(
+                textDirection: TextDirection.rtl,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextButton.icon(
+                    onPressed: _recordingLang == null ? _exitHandoffMode : null,
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('رجوع'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -335,7 +714,10 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                     padding: const EdgeInsets.only(left: 8),
                     child: GestureDetector(
                       onTap: _recordingLang == null
-                          ? () => setState(() => _selectedTarget = lang)
+                          ? () async {
+                              setState(() => _selectedTarget = lang);
+                              await _prefsService.setLastSelectedTarget(lang);
+                            }
                           : null,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -388,7 +770,6 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     final isOtherRecording = _recordingLang != null && _recordingLang != lang;
     final isNextTurn = _recordingLang == null && _nextTurn == lang;
     
-    // Determine button state
     Color bgColor;
     Color borderColor;
     bool isDisabled = isOtherRecording;
@@ -401,108 +782,91 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
       borderColor = Colors.green;
     } else {
       bgColor = Colors.grey.withOpacity(0.1);
-      borderColor = Colors.grey.withOpacity(0.5);
+      borderColor = Colors.grey.withOpacity(0.3);
     }
-    
-    Widget buttonContent = Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(flag, style: const TextStyle(fontSize: 40)),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            color: isDisabled ? Colors.grey : Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        // Recording indicator
-        if (isRecording) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Container(
-                    width: 12 * _pulseAnimation.value,
-                    height: 12 * _pulseAnimation.value,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'يسجل الآن',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
-        // Next turn indicator
-        if (isNextTurn && !isRecording) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              'دورك الآن',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
     
     return GestureDetector(
       onTapDown: isDisabled ? null : (_) => _startRecording(lang),
-      onTapUp: isRecording ? (_) => _stopRecording() : null,
-      onTapCancel: isRecording ? _stopRecording : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 160,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: borderColor, width: 3),
-        ),
-        child: buttonContent,
+      onTapUp: isDisabled ? null : (_) => _stopRecording(),
+      onTapCancel: isDisabled ? null : _stopRecording,
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          final scale = isRecording ? _pulseAnimation.value : 1.0;
+          return Transform.scale(
+            scale: scale,
+            child: Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: borderColor, width: 3),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(flag, style: const TextStyle(fontSize: 32)),
+                  const SizedBox(height: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: isDisabled ? Colors.grey : Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (isRecording) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.red,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'يسجل الآن',
+                          style: TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (isNextTurn && !isRecording) ...[
+                    const SizedBox(height: 4),
+                    const Text(
+                      'دورك الآن',
+                      style: TextStyle(color: Colors.green, fontSize: 12),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
   
   Widget _buildEmptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.record_voice_over,
-            size: 64,
-            color: Colors.white.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
+          Icon(Icons.chat_bubble_outline, color: Colors.white24, size: 64),
+          SizedBox(height: 16),
           Text(
-            'اضغط مع الاستمرار للتحدث',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
-              fontSize: 16,
-            ),
+            'ابدأ المحادثة',
+            style: TextStyle(color: Colors.white38, fontSize: 16),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'اضغط مع الاستمرار على الزر للتحدث',
+            style: TextStyle(color: Colors.white24, fontSize: 12),
           ),
         ],
       ),
@@ -510,92 +874,78 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
   }
   
   Widget _buildTurnCard(TurnItem turn) {
-    final isArabicToTarget = turn.from == TurnLang.ar;
-    final headerText = isArabicToTarget 
-        ? 'AR → ${turn.target.code.toUpperCase()}' 
+    final isFromAr = turn.from == TurnLang.ar;
+    final header = isFromAr
+        ? 'AR → ${turn.target.code.toUpperCase()}'
         : '${turn.target.code.toUpperCase()} → AR';
-    final headerColor = isArabicToTarget ? Colors.blue : Colors.orange;
     
     return Card(
-      color: const Color(0xFF2A2A4E),
+      color: Colors.white.withOpacity(0.1),
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with language indicator
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: headerColor.withOpacity(0.2),
+                    color: isFromAr
+                        ? Colors.blue.withOpacity(0.3)
+                        : Colors.green.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    headerText,
-                    style: TextStyle(
-                      color: headerColor,
-                      fontSize: 12,
+                    header,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const Spacer(),
                 Text(
-                  turn.target.flag,
-                  style: const TextStyle(fontSize: 16),
+                  '${turn.at.hour}:${turn.at.minute.toString().padLeft(2, '0')}',
+                  style: const TextStyle(color: Colors.white38, fontSize: 10),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            
-            // Transcript section
-            const Text(
+            const SizedBox(height: 8),
+            Text(
               'النص:',
               style: TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
+                color: Colors.white.withOpacity(0.5),
+                fontSize: 10,
               ),
             ),
-            const SizedBox(height: 4),
             Text(
               turn.transcript,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
-            const SizedBox(height: 12),
-            
-            // Translation section
-            const Text(
+            const SizedBox(height: 8),
+            Text(
               'الترجمة:',
               style: TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
+                color: Colors.white.withOpacity(0.5),
+                fontSize: 10,
               ),
             ),
-            const SizedBox(height: 4),
             Text(
               turn.translation,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
-            const SizedBox(height: 16),
-            
-            // TTS buttons row
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () => _speakAr(turn),
                     icon: const Text('🔊'),
-                    label: const Text('Speak Arabic'),
+                    label: const Text('نطق عربي'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.withOpacity(0.3),
                       foregroundColor: Colors.white,
@@ -628,7 +978,6 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     );
   }
   
-  /// Build the intro message buttons row
   Widget _buildIntroButtonsRow() {
     final isDisabled = _recordingLang != null;
     
@@ -638,7 +987,6 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
         children: [
           Row(
             children: [
-              // Speak intro button
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: isDisabled
@@ -669,7 +1017,6 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              // Copy intro button
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: isDisabled
