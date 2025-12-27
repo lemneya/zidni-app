@@ -5,6 +5,8 @@ import 'package:zidni_mobile/services/tts_service.dart';
 import 'package:zidni_mobile/services/intro_message_service.dart';
 import 'package:zidni_mobile/services/conversation_prefs_service.dart';
 import 'package:zidni_mobile/services/location_country_service.dart';
+import 'package:zidni_mobile/services/quick_phrase_pack_service.dart';
+import 'package:zidni_mobile/widgets/quick_phrases_bar.dart';
 
 /// Turn language enum (Arabic or Target)
 enum TurnLang { ar, target }
@@ -371,6 +373,9 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                   textAlign: TextAlign.center,
                 ),
               ),
+              
+              // Quick phrases bar (Gate #16)
+              _buildQuickPhrasesBar(),
               
               // Intro message buttons row
               _buildIntroButtonsRow(),
@@ -1057,6 +1062,27 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+  
+  /// Build quick phrases bar (Gate #16)
+  Widget _buildQuickPhrasesBar() {
+    // Get phrases based on country (if location enabled) or default pack
+    final countryCode = _useLocationDefault ? _detectedCountryCode : null;
+    final phrases = QuickPhrasePackService.getPhrasesForCountry(countryCode);
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: QuickPhrasesBar(
+        phrases: phrases,
+        targetLang: _selectedTarget,
+        ttsService: _ttsService,
+        isDisabled: _recordingLang != null,
       ),
     );
   }
