@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/deal_folder.dart';
+import '../services/offline_settings_service.dart';
+import '../services/local_companion_client.dart';
 
 /// Bottom sheet shown after a capture is saved to a folder.
 /// Provides one-tap access to copy proof block and follow-up templates.
-class PostCaptureActionsSheet extends StatelessWidget {
+/// When offline mode is enabled, uses local LLM for smarter templates.
+class PostCaptureActionsSheet extends StatefulWidget {
   final DealFolder folder;
   final String transcript;
 
@@ -13,6 +16,14 @@ class PostCaptureActionsSheet extends StatelessWidget {
     required this.folder,
     required this.transcript,
   }) : super(key: key);
+
+  @override
+  State<PostCaptureActionsSheet> createState() => _PostCaptureActionsSheetState();
+}
+
+class _PostCaptureActionsSheetState extends State<PostCaptureActionsSheet> {
+  bool _generatingArabic = false;
+  bool _generatingChinese = false;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +50,7 @@ class PostCaptureActionsSheet extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      folder.displayName,
+                      widget.folder.displayName,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -84,27 +95,39 @@ class PostCaptureActionsSheet extends StatelessWidget {
           
           // Copy Arabic Follow-up Button
           OutlinedButton.icon(
-            icon: const Icon(Icons.copy),
-            label: const Text('Copy Arabic Follow-up'),
+            icon: _generatingArabic
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.copy),
+            label: Text(_generatingArabic ? 'Generating...' : 'Copy Arabic Follow-up'),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.blue,
               padding: const EdgeInsets.symmetric(vertical: 14),
               side: const BorderSide(color: Colors.blue),
             ),
-            onPressed: () => _copyArabicTemplate(context),
+            onPressed: _generatingArabic ? null : () => _copyArabicTemplate(context),
           ),
           const SizedBox(height: 12),
           
           // Copy Chinese Follow-up Button
           OutlinedButton.icon(
-            icon: const Icon(Icons.copy),
-            label: const Text('Copy Chinese Follow-up'),
+            icon: _generatingChinese
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.copy),
+            label: Text(_generatingChinese ? 'Generating...' : 'Copy Chinese Follow-up'),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.green,
               padding: const EdgeInsets.symmetric(vertical: 14),
               side: const BorderSide(color: Colors.green),
             ),
-            onPressed: () => _copyChineseTemplate(context),
+            onPressed: _generatingChinese ? null : () => _copyChineseTemplate(context),
           ),
           const SizedBox(height: 16),
           
@@ -121,20 +144,20 @@ class PostCaptureActionsSheet extends StatelessWidget {
 
   void _copyProofBlock(BuildContext context) {
     final buffer = StringBuffer();
-    buffer.writeln('📋 ${folder.displayName}');
-    if (folder.category != null) {
-      buffer.writeln('Category: ${folder.category}');
+    buffer.writeln('📋 ${widget.folder.displayName}');
+    if (widget.folder.category != null) {
+      buffer.writeln('Category: ${widget.folder.category}');
     }
-    if (folder.priority != null) {
-      buffer.writeln('Priority: ${folder.priority}');
+    if (widget.folder.priority != null) {
+      buffer.writeln('Priority: ${widget.folder.priority}');
     }
-    if (folder.boothHall != null) {
-      buffer.writeln('Booth/Hall: ${folder.boothHall}');
+    if (widget.folder.boothHall != null) {
+      buffer.writeln('Booth/Hall: ${widget.folder.boothHall}');
     }
-    if (transcript.isNotEmpty) {
+    if (widget.transcript.isNotEmpty) {
       buffer.writeln();
       buffer.writeln('Notes:');
-      buffer.writeln(transcript);
+      buffer.writeln(widget.transcript);
     }
     
     Clipboard.setData(ClipboardData(text: buffer.toString()));
@@ -146,11 +169,58 @@ class PostCaptureActionsSheet extends StatelessWidget {
     );
   }
 
-  void _copyArabicTemplate(BuildContext context) {
-    final category = folder.category ?? 'غير محدد';
-    final priority = folder.priority ?? 'غير محدد';
-    final boothHall = folder.boothHall ?? 'غير محدد';
-    final supplier = folder.supplierName ?? folder.displayName;
+  Future<void> _copyArabicTemplate(BuildContext context) async {
+    // Check if offline mode is enabled
+    final isOffline = await OfflineSettingsService.isOfflineModeEnabled();
+    
+    if (isOffline) {
+      // Use local LLM for smarter generation
+      setState(() => _generatingArabic = true);
+      
+      final url = await OfflineSettingsService.getCompanionUrl();
+      final client = LocalCompanionClient(baseUrl: url);
+      
+      final generated = await client.generateArabicFollowup(
+        folderName: widget.folder.displayName,
+        transcript: widget.transcript,
+        category: widget.folder.category,
+        boothHall: widget.folder.boothHall,
+      );
+      
+      if (!mounted) return;
+      setState(() => _generatingArabic = false);
+      
+      if (generated != null && generated.isNotEmpty) {
+        Clipboard.setData(ClipboardData(text: generated));
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text('AI-generated Arabic follow-up copied'),
+              ],
+            ),
+            backgroundColor: Colors.blue,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      // Fall through to template if LLM fails
+    }
+    
+    // Use static template
+    if (!context.mounted) return;
+    _copyArabicTemplateStatic(context);
+  }
+
+  void _copyArabicTemplateStatic(BuildContext context) {
+    final category = widget.folder.category ?? 'غير محدد';
+    final priority = widget.folder.priority ?? 'غير محدد';
+    final boothHall = widget.folder.boothHall ?? 'غير محدد';
+    final supplier = widget.folder.supplierName ?? widget.folder.displayName;
     
     final buffer = StringBuffer();
     buffer.writeln('السلام عليكم،');
@@ -162,10 +232,10 @@ class PostCaptureActionsSheet extends StatelessWidget {
     buffer.writeln('الأولوية: $priority');
     buffer.writeln('الموقع: $boothHall');
     
-    if (transcript.isNotEmpty) {
+    if (widget.transcript.isNotEmpty) {
       buffer.writeln();
       buffer.writeln('ملاحظات من اللقاء:');
-      buffer.writeln(transcript);
+      buffer.writeln(widget.transcript);
     }
     
     buffer.writeln();
@@ -182,11 +252,58 @@ class PostCaptureActionsSheet extends StatelessWidget {
     );
   }
 
-  void _copyChineseTemplate(BuildContext context) {
-    final category = folder.category ?? '未指定';
-    final priority = folder.priority ?? '未指定';
-    final boothHall = folder.boothHall ?? '未指定';
-    final supplier = folder.supplierName ?? folder.displayName;
+  Future<void> _copyChineseTemplate(BuildContext context) async {
+    // Check if offline mode is enabled
+    final isOffline = await OfflineSettingsService.isOfflineModeEnabled();
+    
+    if (isOffline) {
+      // Use local LLM for smarter generation
+      setState(() => _generatingChinese = true);
+      
+      final url = await OfflineSettingsService.getCompanionUrl();
+      final client = LocalCompanionClient(baseUrl: url);
+      
+      final generated = await client.generateChineseFollowup(
+        folderName: widget.folder.displayName,
+        transcript: widget.transcript,
+        category: widget.folder.category,
+        boothHall: widget.folder.boothHall,
+      );
+      
+      if (!mounted) return;
+      setState(() => _generatingChinese = false);
+      
+      if (generated != null && generated.isNotEmpty) {
+        Clipboard.setData(ClipboardData(text: generated));
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text('AI-generated Chinese follow-up copied'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+      // Fall through to template if LLM fails
+    }
+    
+    // Use static template
+    if (!context.mounted) return;
+    _copyChineseTemplateStatic(context);
+  }
+
+  void _copyChineseTemplateStatic(BuildContext context) {
+    final category = widget.folder.category ?? '未指定';
+    final priority = widget.folder.priority ?? '未指定';
+    final boothHall = widget.folder.boothHall ?? '未指定';
+    final supplier = widget.folder.supplierName ?? widget.folder.displayName;
     
     final buffer = StringBuffer();
     buffer.writeln('您好，');
@@ -198,10 +315,10 @@ class PostCaptureActionsSheet extends StatelessWidget {
     buffer.writeln('优先级: $priority');
     buffer.writeln('展位: $boothHall');
     
-    if (transcript.isNotEmpty) {
+    if (widget.transcript.isNotEmpty) {
       buffer.writeln();
       buffer.writeln('会议记录:');
-      buffer.writeln(transcript);
+      buffer.writeln(widget.transcript);
     }
     
     buffer.writeln();

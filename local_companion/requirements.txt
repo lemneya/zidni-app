@@ -1,0 +1,21 @@
+# Zidni Local Companion Server Dependencies
+
+# Web framework
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# STT - OpenAI Whisper
+openai-whisper>=20231117
+
+# LLM - Lightweight local inference
+# Choose one based on your hardware:
+# For CPU: llama-cpp-python
+# For GPU: transformers + torch
+
+# Audio processing
+soundfile>=0.12.0
+numpy>=1.24.0
+
+# Optional: For better performance
+# torch>=2.0.0
+# transformers>=4.35.0
