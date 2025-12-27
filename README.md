@@ -1,59 +1,79 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Zidni زِدني
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> **North Star**: Zidni is the daily Arabic-first habit tool that gives Arabs an edge of knowledge + technology anywhere they are AND protects them from exploitation.
 
-## About Laravel
+## Vision
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Zidni empowers Arabic speakers with practical tools for real-world situations—trade fairs, negotiations, travel, and daily transactions. Every feature must deliver:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Pillar | Description |
+|--------|-------------|
+| **Edge** | User gains practical advantage (faster, smarter action) |
+| **Protection** | Reduces cheating, misunderstanding, hidden fees, bad paperwork |
+| **Habit** | Designed for weekly/daily use |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Canton Fair Milestone (v0.15)
 
-## Learning Laravel
+Zidni is battle-tested for the Canton Fair—the world's largest trade show. Current capabilities:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- **GUL Voice Capture**: Press-hold-release voice notes in Arabic
+- **Conversation Mode**: AR ⇄ ZH/EN/TR/ES turn-taking with TTS
+- **Hand-the-phone Mode**: Clean UI for the other party to speak
+- **Offline Queue**: Captures saved locally when network fails
+- **Quick Save**: One-tap save to last-used folder
+- **Post-capture Actions**: Copy proof blocks and follow-up templates
+- **Location-aware**: Auto-selects target language based on country
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Protection Layer
 
-## Laravel Sponsors
+Future gates will emphasize **Protection Outputs**:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- Copy packs (proof of conversation, agreement summaries)
+- Risk prompts (hidden fees, unusual terms)
+- Country/role packs (taxi, supplier, customs)
+- Agreement summaries with red flags
 
-### Premium Partners
+## Gate Discipline
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Development follows strict gate discipline:
 
-## Contributing
+1. **One gate = one PR** with clear scope
+2. **Arabic-first UI** (RTL everywhere)
+3. **No new tabs** without explicit approval
+4. **No scheduling/notifications** (scope creep)
+5. **Locked files untouched** (gul_control, stt_engine, stt_engine_speech_to_text)
+6. **Proofs required**: flutter analyze clean + locked files empty diff
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+See [GATEKEEPER_CHARTER.md](docs/GATEKEEPER_CHARTER.md) for full rules.
 
-## Code of Conduct
+## Project Structure
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```
+zidni-app/
+├── zidni_mobile/          # Flutter mobile app
+│   ├── lib/
+│   │   ├── screens/       # App screens
+│   │   ├── widgets/       # Reusable widgets
+│   │   ├── services/      # Business logic
+│   │   └── models/        # Data models
+│   └── pubspec.yaml
+├── local_companion/       # Offline STT/LLM server
+└── docs/                  # Documentation
+```
 
-## Security Vulnerabilities
+## Tags
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+| Tag | Gate | Description |
+|-----|------|-------------|
+| v0.15 | #15 | Location default + handoff mode + loud mode |
+| v0.14 | #14 | Intro message (TTS) + copy intro |
+| v0.13 | #13 | Multi-target conversation (ZH+EN+TR+ES) |
+| v0.12 | #12 | Conversation mode turn-taking |
+| v0.11 | #11 | Offline queue hardening |
+| v0.10 | #10 | Offline-safe capture queue |
+| v0.9 | #9 | Pinned folder quick save |
+| v0.8 | #8 | Post-capture actions |
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Proprietary. All rights reserved.
