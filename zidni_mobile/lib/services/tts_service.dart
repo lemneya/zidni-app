@@ -8,6 +8,7 @@ class TtsService {
   final FlutterTts _flutterTts = FlutterTts();
   bool _isInitialized = false;
   bool _isSpeaking = false;
+  bool _loudMode = false;
   
   /// Callback when TTS starts speaking
   Function()? onStart;
@@ -50,6 +51,15 @@ class TtsService {
   /// Check if TTS is currently speaking
   bool get isSpeaking => _isSpeaking;
   
+  /// Check if loud mode is enabled
+  bool get loudMode => _loudMode;
+  
+  /// Set loud mode for noisy environments
+  /// When enabled: higher volume, slower speech rate
+  void setLoudMode(bool enabled) {
+    _loudMode = enabled;
+  }
+  
   /// Speak text in the specified language
   /// 
   /// [text] - The text to speak
@@ -68,10 +78,16 @@ class TtsService {
     final locale = _getLocale(langCode);
     await _flutterTts.setLanguage(locale);
     
-    // Set speech parameters
-    await _flutterTts.setSpeechRate(0.5); // Slower for clarity
-    await _flutterTts.setVolume(1.0);
-    await _flutterTts.setPitch(1.0);
+    // Set speech parameters based on loud mode
+    if (_loudMode) {
+      await _flutterTts.setSpeechRate(0.4); // Even slower for noisy environments
+      await _flutterTts.setVolume(1.0); // Max volume
+      await _flutterTts.setPitch(1.0);
+    } else {
+      await _flutterTts.setSpeechRate(0.5); // Normal slower for clarity
+      await _flutterTts.setVolume(1.0);
+      await _flutterTts.setPitch(1.0);
+    }
     
     // Speak
     await _flutterTts.speak(text);
