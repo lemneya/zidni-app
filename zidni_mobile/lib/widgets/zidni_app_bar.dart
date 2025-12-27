@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:zidni_mobile/screens/conversation/conversation_mode_screen.dart';
+import 'package:zidni_mobile/services/stt_engine.dart';
 
 class ZidniAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const ZidniAppBar({super.key});
+  final SttEngine sttEngine;
+  
+  const ZidniAppBar({
+    super.key,
+    required this.sttEngine,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,15 +37,25 @@ class ZidniAppBar extends StatelessWidget implements PreferredSizeWidget {
           onPressed: () {},
           tooltip: 'Eyes'),
       centerTitle: true,
-      // END (left in RTL): Ravigh, Apps
+      // END (left in RTL): Ravigh (Conversation Mode), Apps
       actions: [
         IconButton(
             icon: const Icon(Icons.lightbulb_outline),
-            onPressed: () {},
-            tooltip: 'Ravigh'),
+            onPressed: () => _openConversationMode(context),
+            tooltip: 'Ravigh - Conversation Mode'),
         IconButton(
             icon: const Icon(Icons.apps), onPressed: () {}, tooltip: 'Apps'),
       ],
+    );
+  }
+  
+  void _openConversationMode(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ConversationModeScreen(
+          sttEngine: sttEngine,
+        ),
+      ),
     );
   }
 

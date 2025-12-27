@@ -46,7 +46,7 @@ class _ZidniShellState extends State<ZidniShell> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: const ZidniAppBar(),
+        appBar: ZidniAppBar(sttEngine: widget.sttEngine),
         body: _widgetOptions[_selectedIndex],
         floatingActionButton: GulControl(
           sttEngine: widget.sttEngine,
