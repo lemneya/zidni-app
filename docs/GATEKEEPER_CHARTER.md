@@ -102,6 +102,20 @@ No issues allowed. Warnings must be resolved before merge.
 
 ---
 
+## Cost Discipline (Mandatory)
+
+Zidni must remain high-value and affordable. Therefore:
+
+1. **Zero-token baseline:** Every gate must ship with a **zero-token** path (on-device/templates/rules) unless explicitly approved otherwise.
+2. **Tiered upgrades:** Token-based enhancements are allowed only as **opt-in upgrades** tied to subscription tiers.
+3. **Hard budgets:** Each tier has a monthly token budget; if exceeded, features must **degrade gracefully**.
+4. **Caching required:** Token outputs must be cacheable whenever possible.
+5. **No "paywalling protection":** Core protection and dignity features are not restricted behind high tiers.
+
+Gatekeeper must reject any gate that introduces uncontrolled token spend.
+
+---
+
 ## Core vs Pack
 
 **Core** = app behavior, screens, services (requires full gate process)
@@ -113,6 +127,7 @@ No issues allowed. Warnings must be resolved before merge.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v4.1 | 2025-12-27 | Added Cost Discipline section, tiered subscription model |
 | v4 | 2025-12-27 | Added Ethical Integrity pillar, Ethics NO-GO section |
 | v3 | 2025-12-27 | Added Edge/Protection/Habit pillars |
 | v2 | 2025-12-27 | Initial charter |

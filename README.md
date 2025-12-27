@@ -17,6 +17,20 @@ Zidni is the daily Arabic-first habit tool that empowers Arabs anywhere with:
 
 **Non-negotiables:** Arabic-first UI, visible consent for recording, no stealth behavior, one gate per PR with raw proof, locked files untouched.
 
+## Subscription Model (Tiered)
+
+Zidni is a **tiered subscription** product.
+
+**Value-first rule:** Every user gets the **core daily habit + protection layer**.
+Paid tiers unlock **more automation and higher certainty** (e.g., advanced summaries, deep checks), while respecting strict cost controls.
+
+## Cost Discipline (Tokens + Infra)
+
+- **Zero-token first:** Prefer on-device, templates, and rule-based logic.
+- **Tier budgets:** Token-based features have hard monthly caps per tier.
+- **Graceful fallback:** If budget is exceeded (or offline), Zidni must still produce a usable output using local logic.
+- **Caching:** Reuse results to reduce cost and improve speed.
+
 ## Canton Fair Milestone
 
 Zidni's first real-world test: Canton Fair 2025. Features are designed for:
@@ -64,6 +78,7 @@ zidni-app/
 | v0.13 | Gate #13 | Multi-target Conversation (ZH+EN+TR+ES) |
 | v0.14 | Gate #14 | Intro Message (TTS) |
 | v0.15 | Gate #15 | Location Default + Handoff + Loud Mode |
+| v0.16 | Gate #16 | Quick Phrases Packs |
 
 ## License
 

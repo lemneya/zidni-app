@@ -22,6 +22,23 @@
 - [ ] No stealth recording / unclear consent cues
 - [ ] No illegal instructions or bypassing systems
 
+## Tiered Subscription + Cost Checklist (required)
+
+- [ ] This feature supports Zidni's **tiered subscription** model (not one-off pricing).
+- [ ] **Zero-token fallback exists** (templates/rules/on-device) and is described below.
+- [ ] If tokens are used:
+  - [ ] Token use is **opt-in** (not automatic).
+  - [ ] Feature is **budgeted by tier** (caps defined).
+  - [ ] **Caching strategy** is described.
+  - [ ] Graceful degradation when over budget/offline is implemented.
+- [ ] Core protection/dignity is not paywalled.
+
+### Zero-token fallback description
+<!-- Explain the no-token behavior here -->
+
+### Token path description (if any)
+<!-- Model, approximate tokens, monthly caps per tier, caching plan -->
+
 ## Proof (required)
 
 - [ ] `flutter analyze` clean (paste output)
