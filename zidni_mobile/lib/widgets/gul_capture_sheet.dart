@@ -244,13 +244,12 @@ class _GulCaptureSheetState extends State<GulCaptureSheet> {
         );
       }
     } catch (e) {
-      // Network error - save to offline queue
-      await OfflineCaptureQueue.addToQueue(PendingCapture(
+      // Network error - save to offline queue with size cap
+      await OfflineCaptureQueue.addToQueueWithSizeCap(
         folderId: folderId,
         folderName: folderName,
         transcript: transcript,
-        createdAt: DateTime.now(),
-      ));
+      );
 
       if (!mounted) return;
 
@@ -318,13 +317,12 @@ class _GulCaptureSheetState extends State<GulCaptureSheet> {
         );
       }
     } catch (e) {
-      // Network error - save to offline queue
-      await OfflineCaptureQueue.addToQueue(PendingCapture(
+      // Network error - save to offline queue with size cap
+      await OfflineCaptureQueue.addToQueueWithSizeCap(
         folderId: folder.id,
         folderName: folder.displayName,
         transcript: transcript,
-        createdAt: DateTime.now(),
-      ));
+      );
 
       // Still save as last used folder
       await LastFolderService.setLastFolder(folder.id, folder.displayName);
