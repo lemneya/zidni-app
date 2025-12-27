@@ -3,25 +3,78 @@ import 'package:zidni_mobile/services/stt_engine.dart';
 import 'package:zidni_mobile/services/translation_service.dart';
 import 'package:zidni_mobile/services/tts_service.dart';
 
-/// Turn language enum
-enum TurnLang { ar, zh }
+/// Turn language enum (Arabic or Target)
+enum TurnLang { ar, target }
+
+/// Target language options
+enum TargetLang { zh, en, tr, es }
+
+/// Extension for TargetLang to get display info
+extension TargetLangExtension on TargetLang {
+  String get code {
+    switch (this) {
+      case TargetLang.zh: return 'zh';
+      case TargetLang.en: return 'en';
+      case TargetLang.tr: return 'tr';
+      case TargetLang.es: return 'es';
+    }
+  }
+  
+  String get ttsLocale {
+    switch (this) {
+      case TargetLang.zh: return 'zh-CN';
+      case TargetLang.en: return 'en-US';
+      case TargetLang.tr: return 'tr-TR';
+      case TargetLang.es: return 'es-ES';
+    }
+  }
+  
+  String get flag {
+    switch (this) {
+      case TargetLang.zh: return '🇨🇳';
+      case TargetLang.en: return '🇺🇸';
+      case TargetLang.tr: return '🇹🇷';
+      case TargetLang.es: return '🇪🇸';
+    }
+  }
+  
+  String get arabicName {
+    switch (this) {
+      case TargetLang.zh: return 'الصينية';
+      case TargetLang.en: return 'الإنجليزية';
+      case TargetLang.tr: return 'التركية';
+      case TargetLang.es: return 'الإسبانية';
+    }
+  }
+  
+  String get nativeName {
+    switch (this) {
+      case TargetLang.zh: return '中文';
+      case TargetLang.en: return 'English';
+      case TargetLang.tr: return 'Türkçe';
+      case TargetLang.es: return 'Español';
+    }
+  }
+}
 
 /// A single turn in the conversation
 class TurnItem {
   final TurnLang from;
+  final TargetLang target; // The target language for this turn
   final String transcript;
   final String translation;
   final DateTime at;
   
   TurnItem({
     required this.from,
+    required this.target,
     required this.transcript,
     required this.translation,
     required this.at,
   });
 }
 
-/// Conversation Mode Screen for AR ⇄ ZH turn-taking
+/// Conversation Mode Screen for AR ⇄ Multi-target turn-taking
 /// 
 /// Entry point: ZidniAppBar → Ravigh icon
 class ConversationModeScreen extends StatefulWidget {
@@ -42,6 +95,7 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
   // State machine variables
   TurnLang? _recordingLang; // null when not recording
   TurnLang _nextTurn = TurnLang.ar; // default start
+  TargetLang _selectedTarget = TargetLang.zh; // default target language
   final List<TurnItem> _turns = []; // latest first
   
   // Services
@@ -51,7 +105,6 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
   // Pulse animation
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-  
   
   @override
   void initState() {
@@ -87,21 +140,26 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     if (transcript.isEmpty || _recordingLang == null) return;
     
     final from = _recordingLang!;
-    final to = from == TurnLang.ar ? TurnLang.zh : TurnLang.ar;
+    final to = from == TurnLang.ar ? TurnLang.target : TurnLang.ar;
     
     // Stop listening
     await widget.sttEngine.stopListening();
     
+    // Determine translation codes
+    final fromCode = from == TurnLang.ar ? 'ar' : _selectedTarget.code;
+    final toCode = to == TurnLang.ar ? 'ar' : _selectedTarget.code;
+    
     // Translate
     final translation = await _translationService.translate(
       text: transcript,
-      fromLang: from == TurnLang.ar ? 'ar' : 'zh',
-      toLang: to == TurnLang.ar ? 'ar' : 'zh',
+      fromLang: fromCode,
+      toLang: toCode,
     );
     
-    // Create turn item and prepend to list
+    // Create turn item with current target language
     final turnItem = TurnItem(
       from: from,
+      target: _selectedTarget, // Save the target language with the turn
       transcript: transcript,
       translation: translation,
       at: DateTime.now(),
@@ -145,7 +203,7 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     await widget.sttEngine.stopListening();
   }
   
-  /// Speak Arabic text
+  /// Speak Arabic text for a turn
   Future<void> _speakAr(TurnItem turn) async {
     await _ttsService.stop();
     // Speak Arabic: if turn is from AR, speak transcript; else speak translation
@@ -153,12 +211,12 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     await _ttsService.speak(text, 'ar');
   }
   
-  /// Speak Chinese text
-  Future<void> _speakZh(TurnItem turn) async {
+  /// Speak target language text for a turn
+  Future<void> _speakTarget(TurnItem turn) async {
     await _ttsService.stop();
-    // Speak Chinese: if turn is from ZH, speak transcript; else speak translation
-    final text = turn.from == TurnLang.zh ? turn.transcript : turn.translation;
-    await _ttsService.speak(text, 'zh');
+    // Speak target: if turn is from target, speak transcript; else speak translation
+    final text = turn.from == TurnLang.target ? turn.transcript : turn.translation;
+    await _ttsService.speak(text, turn.target.ttsLocale);
   }
   
   @override
@@ -186,6 +244,9 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
         body: SafeArea(
           child: Column(
             children: [
+              // Language selector
+              _buildLanguageSelector(),
+              
               // Helper text
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -213,12 +274,12 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                       ),
                     ),
                     const SizedBox(width: 16),
-                    // Chinese button
+                    // Target button
                     Expanded(
                       child: _buildTurnButton(
-                        lang: TurnLang.zh,
-                        label: '他说话',
-                        flag: '🇨🇳',
+                        lang: TurnLang.target,
+                        label: 'هو يتحدث',
+                        flag: _selectedTarget.flag,
                       ),
                     ),
                   ],
@@ -240,6 +301,74 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+  
+  Widget _buildLanguageSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          const Text(
+            'اللغة:',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: TargetLang.values.map((lang) {
+                  final isSelected = _selectedTarget == lang;
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: GestureDetector(
+                      onTap: _recordingLang == null
+                          ? () => setState(() => _selectedTarget = lang)
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.blue.withOpacity(0.3)
+                              : Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected ? Colors.blue : Colors.grey.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(lang.flag, style: const TextStyle(fontSize: 16)),
+                            const SizedBox(width: 6),
+                            Text(
+                              lang.arabicName,
+                              style: TextStyle(
+                                color: isSelected ? Colors.blue : Colors.white70,
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -375,9 +504,11 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
   }
   
   Widget _buildTurnCard(TurnItem turn) {
-    final isArabicToZh = turn.from == TurnLang.ar;
-    final headerText = isArabicToZh ? 'AR → ZH' : 'ZH → AR';
-    final headerColor = isArabicToZh ? Colors.blue : Colors.orange;
+    final isArabicToTarget = turn.from == TurnLang.ar;
+    final headerText = isArabicToTarget 
+        ? 'AR → ${turn.target.code.toUpperCase()}' 
+        : '${turn.target.code.toUpperCase()} → AR';
+    final headerColor = isArabicToTarget ? Colors.blue : Colors.orange;
     
     return Card(
       color: const Color(0xFF2A2A4E),
@@ -388,21 +519,30 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: headerColor.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                headerText,
-                style: TextStyle(
-                  color: headerColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+            // Header with language indicator
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: headerColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    headerText,
+                    style: TextStyle(
+                      color: headerColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Text(
+                  turn.target.flag,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             
@@ -462,9 +602,9 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _speakZh(turn),
+                    onPressed: () => _speakTarget(turn),
                     icon: const Text('🔊'),
-                    label: const Text('Speak Chinese'),
+                    label: Text('Speak ${turn.target.nativeName}'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green.withOpacity(0.3),
                       foregroundColor: Colors.white,
