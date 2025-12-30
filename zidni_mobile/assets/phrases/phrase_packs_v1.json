@@ -1,0 +1,530 @@
+{
+  "version": "1.0",
+  "packs": [
+    {
+      "service": "taxi",
+      "phrases": [
+        {
+          "id": "taxi_1",
+          "arabic": "أريد الذهاب إلى هذا العنوان",
+          "translations": {
+            "zh": "我要去这个地址",
+            "en": "I want to go to this address",
+            "tr": "Bu adrese gitmek istiyorum",
+            "es": "Quiero ir a esta dirección"
+          }
+        },
+        {
+          "id": "taxi_2",
+          "arabic": "كم التكلفة؟",
+          "translations": {
+            "zh": "多少钱？",
+            "en": "How much does it cost?",
+            "tr": "Ne kadar?",
+            "es": "¿Cuánto cuesta?"
+          }
+        },
+        {
+          "id": "taxi_3",
+          "arabic": "توقف هنا من فضلك",
+          "translations": {
+            "zh": "请在这里停车",
+            "en": "Please stop here",
+            "tr": "Lütfen burada durun",
+            "es": "Pare aquí, por favor"
+          }
+        },
+        {
+          "id": "taxi_4",
+          "arabic": "استخدم العداد من فضلك",
+          "translations": {
+            "zh": "请打表",
+            "en": "Please use the meter",
+            "tr": "Lütfen taksimetreyi kullanın",
+            "es": "Use el taxímetro, por favor"
+          }
+        },
+        {
+          "id": "taxi_5",
+          "arabic": "هل يمكنك الانتظار؟",
+          "translations": {
+            "zh": "你能等一下吗？",
+            "en": "Can you wait?",
+            "tr": "Bekleyebilir misiniz?",
+            "es": "¿Puede esperar?"
+          }
+        },
+        {
+          "id": "taxi_6",
+          "arabic": "أسرع من فضلك، أنا متأخر",
+          "translations": {
+            "zh": "请快点，我要迟到了",
+            "en": "Please hurry, I'm late",
+            "tr": "Lütfen acele edin, geç kalıyorum",
+            "es": "Por favor, apúrese, llego tarde"
+          }
+        },
+        {
+          "id": "taxi_7",
+          "arabic": "أريد إيصال من فضلك",
+          "translations": {
+            "zh": "请给我收据",
+            "en": "I need a receipt please",
+            "tr": "Fiş istiyorum lütfen",
+            "es": "Necesito un recibo, por favor"
+          }
+        },
+        {
+          "id": "taxi_8",
+          "arabic": "هذا ليس الطريق الصحيح",
+          "translations": {
+            "zh": "这不是正确的路",
+            "en": "This is not the right way",
+            "tr": "Bu doğru yol değil",
+            "es": "Este no es el camino correcto"
+          }
+        },
+        {
+          "id": "taxi_9",
+          "arabic": "افتح صندوق السيارة من فضلك",
+          "translations": {
+            "zh": "请打开后备箱",
+            "en": "Please open the trunk",
+            "tr": "Lütfen bagajı açın",
+            "es": "Abra el maletero, por favor"
+          }
+        },
+        {
+          "id": "taxi_10",
+          "arabic": "شكراً، احتفظ بالباقي",
+          "translations": {
+            "zh": "谢谢，不用找了",
+            "en": "Thank you, keep the change",
+            "tr": "Teşekkürler, üstü kalsın",
+            "es": "Gracias, quédese con el cambio"
+          }
+        }
+      ]
+    },
+    {
+      "service": "hotel",
+      "phrases": [
+        {
+          "id": "hotel_1",
+          "arabic": "لدي حجز باسم...",
+          "translations": {
+            "zh": "我有一个预订，名字是...",
+            "en": "I have a reservation under the name...",
+            "tr": "... adına bir rezervasyonum var",
+            "es": "Tengo una reserva a nombre de..."
+          }
+        },
+        {
+          "id": "hotel_2",
+          "arabic": "هل الغرفة جاهزة؟",
+          "translations": {
+            "zh": "房间准备好了吗？",
+            "en": "Is the room ready?",
+            "tr": "Oda hazır mı?",
+            "es": "¿Está lista la habitación?"
+          }
+        },
+        {
+          "id": "hotel_3",
+          "arabic": "أريد غرفة هادئة",
+          "translations": {
+            "zh": "我想要一个安静的房间",
+            "en": "I want a quiet room",
+            "tr": "Sessiz bir oda istiyorum",
+            "es": "Quiero una habitación tranquila"
+          }
+        },
+        {
+          "id": "hotel_4",
+          "arabic": "ما كلمة سر الواي فاي؟",
+          "translations": {
+            "zh": "WiFi密码是什么？",
+            "en": "What is the WiFi password?",
+            "tr": "WiFi şifresi nedir?",
+            "es": "¿Cuál es la contraseña del WiFi?"
+          }
+        },
+        {
+          "id": "hotel_5",
+          "arabic": "أحتاج منشفة إضافية",
+          "translations": {
+            "zh": "我需要额外的毛巾",
+            "en": "I need an extra towel",
+            "tr": "Ekstra havlu istiyorum",
+            "es": "Necesito una toalla extra"
+          }
+        },
+        {
+          "id": "hotel_6",
+          "arabic": "التكييف لا يعمل",
+          "translations": {
+            "zh": "空调不工作",
+            "en": "The air conditioning is not working",
+            "tr": "Klima çalışmıyor",
+            "es": "El aire acondicionado no funciona"
+          }
+        },
+        {
+          "id": "hotel_7",
+          "arabic": "متى الإفطار؟",
+          "translations": {
+            "zh": "早餐是什么时候？",
+            "en": "What time is breakfast?",
+            "tr": "Kahvaltı saat kaçta?",
+            "es": "¿A qué hora es el desayuno?"
+          }
+        },
+        {
+          "id": "hotel_8",
+          "arabic": "أريد تمديد إقامتي",
+          "translations": {
+            "zh": "我想延长住宿",
+            "en": "I want to extend my stay",
+            "tr": "Kalışımı uzatmak istiyorum",
+            "es": "Quiero extender mi estancia"
+          }
+        },
+        {
+          "id": "hotel_9",
+          "arabic": "أين أقرب صراف آلي؟",
+          "translations": {
+            "zh": "最近的ATM在哪里？",
+            "en": "Where is the nearest ATM?",
+            "tr": "En yakın ATM nerede?",
+            "es": "¿Dónde está el cajero más cercano?"
+          }
+        },
+        {
+          "id": "hotel_10",
+          "arabic": "أريد تسجيل الخروج",
+          "translations": {
+            "zh": "我要退房",
+            "en": "I want to check out",
+            "tr": "Çıkış yapmak istiyorum",
+            "es": "Quiero hacer el check-out"
+          }
+        }
+      ]
+    },
+    {
+      "service": "supplier",
+      "phrases": [
+        {
+          "id": "supplier_1",
+          "arabic": "كم السعر للقطعة الواحدة؟",
+          "translations": {
+            "zh": "单价是多少？",
+            "en": "What is the price per unit?",
+            "tr": "Birim fiyatı nedir?",
+            "es": "¿Cuál es el precio por unidad?"
+          }
+        },
+        {
+          "id": "supplier_2",
+          "arabic": "ما هو الحد الأدنى للطلب؟",
+          "translations": {
+            "zh": "最低订购量是多少？",
+            "en": "What is the minimum order quantity?",
+            "tr": "Asgari sipariş miktarı nedir?",
+            "es": "¿Cuál es la cantidad mínima de pedido?"
+          }
+        },
+        {
+          "id": "supplier_3",
+          "arabic": "هل يمكن تخفيض السعر؟",
+          "translations": {
+            "zh": "可以便宜一点吗？",
+            "en": "Can you lower the price?",
+            "tr": "Fiyatı düşürebilir misiniz?",
+            "es": "¿Puede bajar el precio?"
+          }
+        },
+        {
+          "id": "supplier_4",
+          "arabic": "كم مدة التسليم؟",
+          "translations": {
+            "zh": "交货需要多长时间？",
+            "en": "What is the delivery time?",
+            "tr": "Teslimat süresi ne kadar?",
+            "es": "¿Cuánto tiempo tarda la entrega?"
+          }
+        },
+        {
+          "id": "supplier_5",
+          "arabic": "أرسل التفاصيل على الواتساب",
+          "translations": {
+            "zh": "请把详细信息发到微信",
+            "en": "Send the details on WhatsApp",
+            "tr": "Detayları WhatsApp'tan gönderin",
+            "es": "Envíe los detalles por WhatsApp"
+          }
+        },
+        {
+          "id": "supplier_6",
+          "arabic": "هل لديكم شهادة جودة؟",
+          "translations": {
+            "zh": "你们有质量证书吗？",
+            "en": "Do you have a quality certificate?",
+            "tr": "Kalite sertifikanız var mı?",
+            "es": "¿Tienen certificado de calidad?"
+          }
+        },
+        {
+          "id": "supplier_7",
+          "arabic": "أريد عينة أولاً",
+          "translations": {
+            "zh": "我想先要样品",
+            "en": "I want a sample first",
+            "tr": "Önce numune istiyorum",
+            "es": "Quiero una muestra primero"
+          }
+        },
+        {
+          "id": "supplier_8",
+          "arabic": "ما شروط الدفع؟",
+          "translations": {
+            "zh": "付款条件是什么？",
+            "en": "What are the payment terms?",
+            "tr": "Ödeme koşulları nelerdir?",
+            "es": "¿Cuáles son las condiciones de pago?"
+          }
+        },
+        {
+          "id": "supplier_9",
+          "arabic": "هل يمكن تخصيص المنتج؟",
+          "translations": {
+            "zh": "可以定制产品吗？",
+            "en": "Can you customize the product?",
+            "tr": "Ürünü özelleştirebilir misiniz?",
+            "es": "¿Pueden personalizar el producto?"
+          }
+        },
+        {
+          "id": "supplier_10",
+          "arabic": "أريد فاتورة رسمية",
+          "translations": {
+            "zh": "我要正式发票",
+            "en": "I need an official invoice",
+            "tr": "Resmi fatura istiyorum",
+            "es": "Necesito una factura oficial"
+          }
+        }
+      ]
+    },
+    {
+      "service": "restaurant",
+      "phrases": [
+        {
+          "id": "restaurant_1",
+          "arabic": "طاولة لشخصين من فضلك",
+          "translations": {
+            "zh": "请给我一张两人桌",
+            "en": "A table for two please",
+            "tr": "İki kişilik bir masa lütfen",
+            "es": "Una mesa para dos, por favor"
+          }
+        },
+        {
+          "id": "restaurant_2",
+          "arabic": "القائمة من فضلك",
+          "translations": {
+            "zh": "请给我菜单",
+            "en": "The menu please",
+            "tr": "Menü lütfen",
+            "es": "El menú, por favor"
+          }
+        },
+        {
+          "id": "restaurant_3",
+          "arabic": "ما هو الطبق المميز؟",
+          "translations": {
+            "zh": "招牌菜是什么？",
+            "en": "What is the special dish?",
+            "tr": "Özel yemek nedir?",
+            "es": "¿Cuál es el plato especial?"
+          }
+        },
+        {
+          "id": "restaurant_4",
+          "arabic": "أنا لا آكل لحم الخنزير",
+          "translations": {
+            "zh": "我不吃猪肉",
+            "en": "I don't eat pork",
+            "tr": "Domuz eti yemiyorum",
+            "es": "No como cerdo"
+          }
+        },
+        {
+          "id": "restaurant_5",
+          "arabic": "هل هذا حلال؟",
+          "translations": {
+            "zh": "这是清真的吗？",
+            "en": "Is this halal?",
+            "tr": "Bu helal mi?",
+            "es": "¿Es halal?"
+          }
+        },
+        {
+          "id": "restaurant_6",
+          "arabic": "بدون توابل حارة من فضلك",
+          "translations": {
+            "zh": "请不要放辣",
+            "en": "No spicy please",
+            "tr": "Acısız lütfen",
+            "es": "Sin picante, por favor"
+          }
+        },
+        {
+          "id": "restaurant_7",
+          "arabic": "ماء من فضلك",
+          "translations": {
+            "zh": "请给我水",
+            "en": "Water please",
+            "tr": "Su lütfen",
+            "es": "Agua, por favor"
+          }
+        },
+        {
+          "id": "restaurant_8",
+          "arabic": "الحساب من فضلك",
+          "translations": {
+            "zh": "请结账",
+            "en": "The bill please",
+            "tr": "Hesap lütfen",
+            "es": "La cuenta, por favor"
+          }
+        },
+        {
+          "id": "restaurant_9",
+          "arabic": "هل تقبلون البطاقة؟",
+          "translations": {
+            "zh": "可以刷卡吗？",
+            "en": "Do you accept cards?",
+            "tr": "Kart kabul ediyor musunuz?",
+            "es": "¿Aceptan tarjeta?"
+          }
+        },
+        {
+          "id": "restaurant_10",
+          "arabic": "الطعام كان لذيذاً، شكراً",
+          "translations": {
+            "zh": "食物很好吃，谢谢",
+            "en": "The food was delicious, thank you",
+            "tr": "Yemek çok lezzetliydi, teşekkürler",
+            "es": "La comida estaba deliciosa, gracias"
+          }
+        }
+      ]
+    },
+    {
+      "service": "emergency",
+      "phrases": [
+        {
+          "id": "emergency_1",
+          "arabic": "أحتاج مساعدة!",
+          "translations": {
+            "zh": "我需要帮助！",
+            "en": "I need help!",
+            "tr": "Yardıma ihtiyacım var!",
+            "es": "¡Necesito ayuda!"
+          }
+        },
+        {
+          "id": "emergency_2",
+          "arabic": "اتصل بالشرطة",
+          "translations": {
+            "zh": "请报警",
+            "en": "Call the police",
+            "tr": "Polisi arayın",
+            "es": "Llame a la policía"
+          }
+        },
+        {
+          "id": "emergency_3",
+          "arabic": "اتصل بالإسعاف",
+          "translations": {
+            "zh": "请叫救护车",
+            "en": "Call an ambulance",
+            "tr": "Ambulans çağırın",
+            "es": "Llame a una ambulancia"
+          }
+        },
+        {
+          "id": "emergency_4",
+          "arabic": "أين أقرب مستشفى؟",
+          "translations": {
+            "zh": "最近的医院在哪里？",
+            "en": "Where is the nearest hospital?",
+            "tr": "En yakın hastane nerede?",
+            "es": "¿Dónde está el hospital más cercano?"
+          }
+        },
+        {
+          "id": "emergency_5",
+          "arabic": "فقدت جواز سفري",
+          "translations": {
+            "zh": "我的护照丢了",
+            "en": "I lost my passport",
+            "tr": "Pasaportumu kaybettim",
+            "es": "Perdí mi pasaporte"
+          }
+        },
+        {
+          "id": "emergency_6",
+          "arabic": "سُرقت حقيبتي",
+          "translations": {
+            "zh": "我的包被偷了",
+            "en": "My bag was stolen",
+            "tr": "Çantam çalındı",
+            "es": "Me robaron la bolsa"
+          }
+        },
+        {
+          "id": "emergency_7",
+          "arabic": "أنا مريض",
+          "translations": {
+            "zh": "我生病了",
+            "en": "I am sick",
+            "tr": "Hastayım",
+            "es": "Estoy enfermo"
+          }
+        },
+        {
+          "id": "emergency_8",
+          "arabic": "أين السفارة العربية؟",
+          "translations": {
+            "zh": "阿拉伯大使馆在哪里？",
+            "en": "Where is the Arab embassy?",
+            "tr": "Arap büyükelçiliği nerede?",
+            "es": "¿Dónde está la embajada árabe?"
+          }
+        },
+        {
+          "id": "emergency_9",
+          "arabic": "أحتاج مترجم",
+          "translations": {
+            "zh": "我需要翻译",
+            "en": "I need a translator",
+            "tr": "Tercümana ihtiyacım var",
+            "es": "Necesito un traductor"
+          }
+        },
+        {
+          "id": "emergency_10",
+          "arabic": "هذا رقم هاتفي",
+          "translations": {
+            "zh": "这是我的电话号码",
+            "en": "This is my phone number",
+            "tr": "Bu benim telefon numaram",
+            "es": "Este es mi número de teléfono"
+          }
+        }
+      ]
+    }
+  ]
+}
