@@ -766,6 +766,11 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     );
   }
   
+  /// Mic color rule:
+  /// Blue = me (Arabic speaker)
+  /// Green = other person (Target speaker)
+  /// Active = bright + ring/pulse
+  /// Inactive = muted/dim
   Widget _buildTurnButton({
     required TurnLang lang,
     required String label,
@@ -775,19 +780,36 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     final isOtherRecording = _recordingLang != null && _recordingLang != lang;
     final isNextTurn = _recordingLang == null && _nextTurn == lang;
     
+    // Color scheme: Blue = me (AR), Green = other (Target)
+    final Color baseColor = lang == TurnLang.ar 
+        ? const Color(0xFF2196F3) // Blue for "me"
+        : const Color(0xFF4CAF50); // Green for "other"
+    
     Color bgColor;
     Color borderColor;
+    Color indicatorColor;
     bool isDisabled = isOtherRecording;
     
     if (isRecording) {
-      bgColor = Colors.red.withOpacity(0.3);
-      borderColor = Colors.red;
+      // Active: bright + glow
+      bgColor = baseColor.withOpacity(0.3);
+      borderColor = baseColor;
+      indicatorColor = baseColor;
     } else if (isNextTurn) {
-      bgColor = Colors.green.withOpacity(0.2);
-      borderColor = Colors.green;
+      // Next turn: slightly highlighted
+      bgColor = baseColor.withOpacity(0.15);
+      borderColor = baseColor.withOpacity(0.7);
+      indicatorColor = baseColor;
+    } else if (isOtherRecording) {
+      // Inactive/dim when other is recording
+      bgColor = Colors.grey.withOpacity(0.05);
+      borderColor = Colors.grey.withOpacity(0.2);
+      indicatorColor = Colors.grey;
     } else {
-      bgColor = Colors.grey.withOpacity(0.1);
-      borderColor = Colors.grey.withOpacity(0.3);
+      // Idle state
+      bgColor = baseColor.withOpacity(0.08);
+      borderColor = baseColor.withOpacity(0.4);
+      indicatorColor = baseColor;
     }
     
     return GestureDetector(
@@ -805,17 +827,31 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: borderColor, width: 3),
+                border: Border.all(color: borderColor, width: isRecording ? 4 : 3),
+                boxShadow: isRecording ? [
+                  BoxShadow(
+                    color: baseColor.withOpacity(0.4),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ] : null,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(flag, style: const TextStyle(fontSize: 32)),
-                  const SizedBox(height: 8),
+                  // Mic icon with color
+                  Icon(
+                    Icons.mic,
+                    size: 32,
+                    color: isDisabled ? Colors.grey.withOpacity(0.5) : indicatorColor,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(flag, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(height: 4),
                   Text(
                     label,
                     style: TextStyle(
-                      color: isDisabled ? Colors.grey : Colors.white,
+                      color: isDisabled ? Colors.grey.withOpacity(0.5) : Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -828,24 +864,24 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.red,
+                            color: indicatorColor,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Text(
+                        Text(
                           'يسجل الآن',
-                          style: TextStyle(color: Colors.red, fontSize: 12),
+                          style: TextStyle(color: indicatorColor, fontSize: 12),
                         ),
                       ],
                     ),
                   ],
                   if (isNextTurn && !isRecording) ...[
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'دورك الآن',
-                      style: TextStyle(color: Colors.green, fontSize: 12),
+                      style: TextStyle(color: indicatorColor, fontSize: 12),
                     ),
                   ],
                 ],
