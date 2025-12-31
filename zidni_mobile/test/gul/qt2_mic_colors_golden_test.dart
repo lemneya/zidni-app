@@ -274,7 +274,7 @@ Widget _buildMockTurnButton({
   }
   
   return Container(
-    height: 120,
+    height: 140,
     decoration: BoxDecoration(
       color: bgColor,
       borderRadius: BorderRadius.circular(16),
