@@ -441,6 +441,35 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
                 ),
               ),
               
+              // Pack Shortcuts Row (Gate LOC-2)
+              PackShortcutsRow(
+                onEyesScanTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const EyesScanScreen(),
+                    ),
+                  );
+                },
+                onCreateDealTap: () {
+                  // Navigate to Eyes scan first (deals are created from scans)
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const EyesScanScreen(),
+                    ),
+                  );
+                },
+                onHistoryTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const UnifiedHistoryScreen(),
+                    ),
+                  );
+                },
+              ),
+              
+              // Pack Accent Header (Gate LOC-2)
+              const PackAccentHeader(),
+              
               // Location auto-selection chip
               if (_locationAutoApplied && _detectedCountryCode != null)
                 _buildLocationChip(),
