@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zidni_mobile/services/stt_engine.dart';
+import 'package:zidni_mobile/eyes/eyes.dart';
 import 'package:zidni_mobile/services/translation_service.dart';
 import 'package:zidni_mobile/services/tts_service.dart';
 import 'package:zidni_mobile/services/intro_message_service.dart';
@@ -347,6 +348,11 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
             icon: const Icon(Icons.close, color: Colors.white),
             onPressed: () => Navigator.of(context).pop(),
           ),
+          actions: const [
+            // Eyes scan button (Gate EYES-1)
+            EyesScanButton(size: 24, color: Colors.white),
+            SizedBox(width: 8),
+          ],
         ),
         body: SafeArea(
           child: Column(
