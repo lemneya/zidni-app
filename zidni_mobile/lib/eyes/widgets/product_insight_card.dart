@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zidni_mobile/eyes/models/eyes_scan_result.dart';
 import 'package:zidni_mobile/eyes/services/eyes_history_service.dart';
+import 'package:zidni_mobile/eyes/widgets/find_it_results_card.dart';
 
 /// Product Insight Card - Displays OCR results with actions
 /// Gate EYES-1: Product Insight Card with Copy, Save, Search
@@ -82,94 +83,23 @@ class _ProductInsightCardState extends State<ProductInsightCard> {
     }
   }
 
-  void _showSearchPlaceholder() {
+  /// Gate EYES-2: Show Find It Results Card
+  void _showFindItResults() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF2A2A4E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Directionality(
         textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.search,
-                size: 48,
-                color: Colors.blue,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'البحث عن المنتج',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'قريباً: البحث في 1688 و Alibaba',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Placeholder search results
-              _buildPlaceholderSearchItem('1688.com', 'منصة الجملة الصينية'),
-              _buildPlaceholderSearchItem('Alibaba.com', 'التجارة الدولية'),
-              _buildPlaceholderSearchItem('أسواق قوانغتشو', 'الأسواق المحلية'),
-              const SizedBox(height: 16),
-            ],
-          ),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return FindItResultsCard(scanResult: widget.result);
+          },
         ),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholderSearchItem(String title, String subtitle) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.link, color: Colors.blue, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            color: Colors.white.withOpacity(0.3),
-            size: 16,
-          ),
-        ],
       ),
     );
   }
@@ -564,9 +494,9 @@ class _ProductInsightCardState extends State<ProductInsightCard> {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _showSearchPlaceholder,
+                onPressed: _showFindItResults,
                 icon: const Icon(Icons.search, size: 18),
-                label: const Text('بحث'),
+                label: const Text('ابحث عنه'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.white.withOpacity(0.3)),
