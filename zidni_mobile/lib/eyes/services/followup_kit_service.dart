@@ -4,7 +4,11 @@ import 'package:zidni_mobile/eyes/models/deal_record.dart';
 /// Gate EYES-3: Create Deal + Follow-up Kit from Eyes
 class FollowupKitService {
   /// Generate follow-up templates for a deal
-  static FollowupKit generateKit(DealRecord deal) {
+  /// [forceSupplierLanguage] - Optional override for supplier language ('en' or 'zh')
+  static FollowupKit generateKit(
+    DealRecord deal, {
+    String? forceSupplierLanguage,
+  }) {
     final productName = deal.productName ?? deal.searchQuery;
     final brand = deal.extractedFields['brand'];
     final model = deal.extractedFields['model'];
@@ -16,16 +20,21 @@ class FollowupKitService {
       productDesc = '$brand $model';
     }
 
-    // Detect if we should use Chinese or English for supplier
-    final bool useChineseForSupplier = _shouldUseChineseTemplate(deal);
+    // Determine supplier language: use forced value or auto-detect
+    final String supplierLang;
+    if (forceSupplierLanguage != null) {
+      supplierLang = forceSupplierLanguage;
+    } else {
+      supplierLang = _shouldUseChineseTemplate(deal) ? 'zh' : 'en';
+    }
 
     return FollowupKit(
       dealId: deal.id,
       arabicTemplate: _generateArabicTemplate(productDesc, brand, model, sku),
-      supplierTemplate: useChineseForSupplier
+      supplierTemplate: supplierLang == 'zh'
           ? _generateChineseTemplate(productDesc, brand, model, sku)
           : _generateEnglishTemplate(productDesc, brand, model, sku),
-      supplierLanguage: useChineseForSupplier ? 'zh' : 'en',
+      supplierLanguage: supplierLang,
     );
   }
 

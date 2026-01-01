@@ -21,6 +21,7 @@ class FollowupKitCard extends StatefulWidget {
 
 class _FollowupKitCardState extends State<FollowupKitCard> {
   late FollowupKit _kit;
+  late String _selectedLanguage; // 'en' or 'zh'
   bool _arabicCopied = false;
   bool _supplierCopied = false;
 
@@ -28,6 +29,21 @@ class _FollowupKitCardState extends State<FollowupKitCard> {
   void initState() {
     super.initState();
     _kit = FollowupKitService.generateKit(widget.deal);
+    _selectedLanguage = _kit.supplierLanguage; // Start with auto-detected
+  }
+
+  void _switchLanguage(String lang) {
+    if (lang == _selectedLanguage) return;
+    
+    setState(() {
+      _selectedLanguage = lang;
+      // Regenerate kit with forced language
+      _kit = FollowupKitService.generateKit(
+        widget.deal,
+        forceSupplierLanguage: lang,
+      );
+      _supplierCopied = false; // Reset copy state when language changes
+    });
   }
 
   Future<void> _copyArabic() async {
@@ -112,6 +128,10 @@ class _FollowupKitCardState extends State<FollowupKitCard> {
             ),
             const SizedBox(height: 16),
 
+            // Language toggle for supplier template
+            _buildLanguageToggle(),
+            const SizedBox(height: 12),
+
             // Supplier template
             _buildTemplateSection(
               title: 'للمورد (${_kit.supplierLanguageArabicName})',
@@ -133,6 +153,67 @@ class _FollowupKitCardState extends State<FollowupKitCard> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageToggle() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.translate, color: Colors.white54, size: 16),
+          const SizedBox(width: 8),
+          const Text(
+            'لغة المورد:',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+            ),
+          ),
+          const Spacer(),
+          _buildLanguageChip('EN', 'en', 'English'),
+          const SizedBox(width: 8),
+          _buildLanguageChip('中文', 'zh', 'Chinese'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguageChip(String label, String langCode, String tooltip) {
+    final isSelected = _selectedLanguage == langCode;
+    
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: () => _switchLanguage(langCode),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected 
+                ? Colors.blue.withOpacity(0.3) 
+                : Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? Colors.blue : Colors.white.withOpacity(0.2),
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.blue : Colors.white70,
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
         ),
       ),
     );

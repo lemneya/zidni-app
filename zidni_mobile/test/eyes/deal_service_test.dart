@@ -243,5 +243,57 @@ void main() {
       expect(kit.supplierTemplate, contains('Shipping'));
       expect(kit.supplierTemplate, contains('Payment'));
     });
+
+    test('forceSupplierLanguage overrides auto-detection to English', () {
+      // This deal would normally auto-detect Chinese (1688 platform)
+      final deal = DealRecord(
+        id: 'deal_123',
+        productName: 'LED灯泡',
+        ocrRawText: 'LED灯 12W',
+        searchQuery: 'LED灯',
+        selectedPlatform: '1688',
+        createdAt: DateTime.now(),
+      );
+
+      // Without override: should be Chinese
+      final autoKit = FollowupKitService.generateKit(deal);
+      expect(autoKit.supplierLanguage, 'zh');
+      expect(autoKit.supplierTemplate, contains('您好'));
+
+      // With override: force English
+      final forcedKit = FollowupKitService.generateKit(
+        deal,
+        forceSupplierLanguage: 'en',
+      );
+      expect(forcedKit.supplierLanguage, 'en');
+      expect(forcedKit.supplierTemplate, contains('Hello'));
+      expect(forcedKit.supplierTemplate, isNot(contains('您好')));
+    });
+
+    test('forceSupplierLanguage overrides auto-detection to Chinese', () {
+      // This deal would normally auto-detect English (Alibaba platform)
+      final deal = DealRecord(
+        id: 'deal_123',
+        productName: 'LED Light',
+        ocrRawText: 'LED Light 12W',
+        searchQuery: 'LED Light',
+        selectedPlatform: 'alibaba',
+        createdAt: DateTime.now(),
+      );
+
+      // Without override: should be English
+      final autoKit = FollowupKitService.generateKit(deal);
+      expect(autoKit.supplierLanguage, 'en');
+      expect(autoKit.supplierTemplate, contains('Hello'));
+
+      // With override: force Chinese
+      final forcedKit = FollowupKitService.generateKit(
+        deal,
+        forceSupplierLanguage: 'zh',
+      );
+      expect(forcedKit.supplierLanguage, 'zh');
+      expect(forcedKit.supplierTemplate, contains('您好'));
+      expect(forcedKit.supplierTemplate, isNot(contains('Hello')));
+    });
   });
 }
