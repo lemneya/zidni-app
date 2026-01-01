@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/context_pack.dart';
 import '../context_packs.dart';
+import '../../kits/kits.dart';
 
 /// Mode Picker Sheet
 /// Gate LOC-1: Context Packs + Mode Selector
@@ -123,6 +124,25 @@ class _ModePickerSheetState extends State<ModePickerSheet> {
                     final pack = ContextPacks.all[index];
                     return _buildPackTile(pack);
                   },
+                ),
+              ),
+              
+              // Kits link
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const KitsScreen()),
+                  );
+                },
+                icon: const Icon(Icons.inventory_2, color: Colors.white70, size: 18),
+                label: const Text(
+                  'حِزم جاهزة',
+                  style: TextStyle(
+                    fontFamily: 'NotoSansArabic',
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
                 ),
               ),
               
