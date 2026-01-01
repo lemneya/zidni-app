@@ -1,6 +1,7 @@
 /// Zidni Eyes - OCR Scan + Product Intelligence
 /// Gate EYES-1: OCR Scan → Product Insight Card → Save
 /// Gate EYES-2: Find Where To Buy - Safe outbound search
+/// Gate EYES-3: Create Deal + Follow-up Kit from Eyes
 ///
 /// Entry points:
 /// - EyesScanButton: Icon button for AppBar/toolbar
@@ -8,16 +9,20 @@
 /// - EyesScanScreen: Full camera + OCR screen
 /// - EyesHistoryScreen: View saved scan results
 /// - FindItResultsCard: Search actions with query builder
+/// - FollowupKitCard: Copy-ready follow-up templates
 
 // Models
 export 'models/eyes_scan_result.dart';
 export 'models/search_query.dart';
+export 'models/deal_record.dart';
 
 // Services
 export 'services/ocr_service.dart';
 export 'services/eyes_history_service.dart';
 export 'services/query_builder_service.dart';
 export 'services/search_history_service.dart';
+export 'services/deal_service.dart';
+export 'services/followup_kit_service.dart';
 
 // Screens
 export 'screens/eyes_scan_screen.dart';
@@ -27,3 +32,4 @@ export 'screens/eyes_history_screen.dart';
 export 'widgets/product_insight_card.dart';
 export 'widgets/eyes_scan_button.dart';
 export 'widgets/find_it_results_card.dart';
+export 'widgets/followup_kit_card.dart';

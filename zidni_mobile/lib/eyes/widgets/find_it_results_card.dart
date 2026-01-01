@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:zidni_mobile/eyes/models/deal_record.dart';
 import 'package:zidni_mobile/eyes/models/eyes_scan_result.dart';
 import 'package:zidni_mobile/eyes/models/search_query.dart';
+import 'package:zidni_mobile/eyes/services/deal_service.dart';
 import 'package:zidni_mobile/eyes/services/query_builder_service.dart';
 import 'package:zidni_mobile/eyes/services/search_history_service.dart';
+import 'package:zidni_mobile/eyes/widgets/followup_kit_card.dart';
 
 /// Find It Results Card - Shows search actions and query builder
 /// Gate EYES-2: Find Where To Buy
@@ -24,6 +27,8 @@ class _FindItResultsCardState extends State<FindItResultsCard> {
   late TextEditingController _queryController;
   final Set<String> _selectedChips = {};
   bool _isSearching = false;
+  bool _isCreatingDeal = false;
+  String? _lastUsedPlatform;
 
   @override
   void initState() {
@@ -65,6 +70,9 @@ class _FindItResultsCardState extends State<FindItResultsCard> {
       // Build the search URL
       final searchUrl = platform.buildSearchUrl(_query.fullQuery);
       final uri = Uri.parse(searchUrl);
+
+      // Track last used platform for deal creation
+      _lastUsedPlatform = platform.name;
 
       // Save search attempt to history
       final searchQuery = _query.copyWith(
@@ -157,6 +165,10 @@ class _FindItResultsCardState extends State<FindItResultsCard> {
 
             // Search platforms
             _buildSearchPlatforms(),
+            const SizedBox(height: 20),
+
+            // Create Deal button
+            _buildCreateDealButton(),
             const SizedBox(height: 16),
           ],
         ),
@@ -418,6 +430,152 @@ class _FindItResultsCardState extends State<FindItResultsCard> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreateDealButton() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.green.withOpacity(0.2),
+            Colors.green.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.handshake,
+                  color: Colors.green,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'إنشاء صفقة',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'احفظ المنتج واحصل على قوالب متابعة جاهزة',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _isCreatingDeal ? null : _createDeal,
+            icon: _isCreatingDeal
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.add_business),
+            label: Text(_isCreatingDeal ? 'جاري الإنشاء...' : 'إنشاء صفقة'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createDeal() async {
+    setState(() {
+      _isCreatingDeal = true;
+    });
+
+    try {
+      // Create the deal record
+      final deal = await DealService.createDeal(
+        scanResult: widget.scanResult,
+        query: _query,
+        selectedPlatform: _lastUsedPlatform,
+      );
+
+      if (mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إنشاء الصفقة بنجاح!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Show follow-up kit card
+        _showFollowupKit(deal);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إنشاء الصفقة: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCreatingDeal = false;
+        });
+      }
+    }
+  }
+
+  void _showFollowupKit(DealRecord deal) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => FollowupKitCard(
+          deal: deal,
+          onClose: () => Navigator.of(context).pop(),
         ),
       ),
     );
