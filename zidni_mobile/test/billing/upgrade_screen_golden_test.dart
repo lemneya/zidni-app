@@ -1,11 +1,39 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zidni_mobile/billing/screens/upgrade_screen.dart';
 import 'package:zidni_mobile/billing/widgets/soft_upgrade_modal.dart';
 import 'package:zidni_mobile/billing/services/feature_gate.dart';
 
+/// Load fonts before running golden tests
+Future<void> loadFonts() async {
+  // Load NotoSansArabic
+  final arabicFontLoader = FontLoader('NotoSansArabic');
+  final arabicFontData = File('assets/fonts/NotoSansArabic-Regular.ttf').readAsBytesSync();
+  arabicFontLoader.addFont(Future.value(ByteData.view(arabicFontData.buffer)));
+  await arabicFontLoader.load();
+  
+  // Load Roboto
+  final robotoLoader = FontLoader('Roboto');
+  final robotoFontData = File('assets/fonts/Roboto-Regular.ttf').readAsBytesSync();
+  robotoLoader.addFont(Future.value(ByteData.view(robotoFontData.buffer)));
+  await robotoLoader.load();
+}
+
+/// Arabic-enabled theme for golden tests
+ThemeData get arabicTheme => ThemeData(
+  fontFamily: 'NotoSansArabic',
+  brightness: Brightness.dark,
+  scaffoldBackgroundColor: const Color(0xFF0F0F23),
+);
+
 void main() {
+  setUpAll(() async {
+    await loadFonts();
+  });
+  
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
   });
@@ -13,8 +41,9 @@ void main() {
   group('Upgrade Screen Golden Tests', () {
     testWidgets('upgrade screen renders correctly', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: UpgradeScreen(),
+        MaterialApp(
+          theme: arabicTheme,
+          home: const UpgradeScreen(),
         ),
       );
       
@@ -28,8 +57,9 @@ void main() {
     
     testWidgets('upgrade screen with triggered feature', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: UpgradeScreen(
+        MaterialApp(
+          theme: arabicTheme,
+          home: const UpgradeScreen(
             triggeredByFeature: Feature.exportPdf,
           ),
         ),
@@ -48,9 +78,10 @@ void main() {
     testWidgets('many deals trigger modal', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          theme: arabicTheme,
           home: Scaffold(
             body: Builder(
-              builder: (context) => Center(
+              builder: (context) => const Center(
                 child: SoftUpgradeModal(
                   trigger: UpgradeTrigger.manyDeals,
                 ),
@@ -71,9 +102,10 @@ void main() {
     testWidgets('frequent searches trigger modal', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          theme: arabicTheme,
           home: Scaffold(
             body: Builder(
-              builder: (context) => Center(
+              builder: (context) => const Center(
                 child: SoftUpgradeModal(
                   trigger: UpgradeTrigger.frequentSearches,
                 ),
@@ -94,9 +126,10 @@ void main() {
     testWidgets('export attempt trigger modal', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          theme: arabicTheme,
           home: Scaffold(
             body: Builder(
-              builder: (context) => Center(
+              builder: (context) => const Center(
                 child: SoftUpgradeModal(
                   trigger: UpgradeTrigger.exportAttempt,
                 ),
@@ -117,9 +150,10 @@ void main() {
     testWidgets('daily limit trigger modal', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          theme: arabicTheme,
           home: Scaffold(
             body: Builder(
-              builder: (context) => Center(
+              builder: (context) => const Center(
                 child: SoftUpgradeModal(
                   trigger: UpgradeTrigger.dailyLimitReached,
                 ),

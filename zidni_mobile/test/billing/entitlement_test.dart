@@ -118,7 +118,7 @@ void main() {
     });
   });
   
-  group('FeatureGate', () {
+  group('FeatureGate - Hard Limits (Paid Features)', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       EntitlementService.clearCache();
@@ -178,38 +178,87 @@ void main() {
       expect(await FeatureGate.isAllowed(Feature.cloudBoost), true);
     });
     
-    test('businessFeatures list is not empty', () {
+    test('businessFeatures list contains only paid features', () {
       expect(FeatureGate.businessFeatures, isNotEmpty);
       expect(FeatureGate.businessFeatures.contains(Feature.exportPdf), true);
+      expect(FeatureGate.businessFeatures.contains(Feature.cloudBoost), true);
+      // Offline features should NOT be in businessFeatures
+      expect(FeatureGate.businessFeatures.contains(Feature.unlimitedScans), false);
     });
     
     test('comingSoonFeatures list contains team mode', () {
       expect(FeatureGate.comingSoonFeatures.contains(Feature.teamMode), true);
     });
+    
+    test('alwaysFreeFeatures list contains offline features', () {
+      expect(FeatureGate.alwaysFreeFeatures.contains(Feature.unlimitedScans), true);
+      expect(FeatureGate.alwaysFreeFeatures.contains(Feature.unlimitedSearches), true);
+      expect(FeatureGate.alwaysFreeFeatures.contains(Feature.unlimitedFollowups), true);
+    });
   });
   
-  group('Feature Limits', () {
+  group('FeatureGate - Soft Prompts (Offline Features)', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       EntitlementService.clearCache();
       await UsageMeterService.clearAll();
     });
     
-    test('scan limit is enforced for free tier', () async {
+    test('scans are ALWAYS allowed for free tier (no hard limit)', () async {
       await EntitlementService.resetToFree();
       
-      // Simulate hitting the limit
-      for (int i = 0; i < FeatureGate.freeDailyScanLimit; i++) {
+      // Simulate heavy usage - should still be allowed
+      for (int i = 0; i < 100; i++) {
         await UsageMeterService.trackEyesScan();
       }
       
       final result = await FeatureGate.check(Feature.unlimitedScans);
       
-      expect(result.allowed, false);
-      expect(result.remainingUses, 0);
+      expect(result.allowed, true); // ALWAYS allowed
     });
     
-    test('scan limit is not enforced for business tier', () async {
+    test('scans show soft prompt at threshold', () async {
+      await EntitlementService.resetToFree();
+      
+      // Simulate hitting soft prompt threshold
+      for (int i = 0; i < FeatureGate.softPromptScanThreshold; i++) {
+        await UsageMeterService.trackEyesScan();
+      }
+      
+      final result = await FeatureGate.check(Feature.unlimitedScans);
+      
+      expect(result.allowed, true); // Still allowed
+      expect(result.isSoftPrompt, true); // But with soft prompt
+      expect(result.showUpgradePrompt, true);
+    });
+    
+    test('searches are ALWAYS allowed for free tier (no hard limit)', () async {
+      await EntitlementService.resetToFree();
+      
+      // Simulate heavy usage - should still be allowed
+      for (int i = 0; i < 100; i++) {
+        await UsageMeterService.trackEyesSearch();
+      }
+      
+      final result = await FeatureGate.check(Feature.unlimitedSearches);
+      
+      expect(result.allowed, true); // ALWAYS allowed
+    });
+    
+    test('followups are ALWAYS allowed for free tier (no hard limit)', () async {
+      await EntitlementService.resetToFree();
+      
+      // Simulate heavy usage - should still be allowed
+      for (int i = 0; i < 50; i++) {
+        await UsageMeterService.trackFollowupCopy();
+      }
+      
+      final result = await FeatureGate.check(Feature.unlimitedFollowups);
+      
+      expect(result.allowed, true); // ALWAYS allowed
+    });
+    
+    test('business tier never sees soft prompts', () async {
       await EntitlementService.setTierForTesting(SubscriptionTier.businessSolo);
       
       // Simulate heavy usage
@@ -220,6 +269,21 @@ void main() {
       final result = await FeatureGate.check(Feature.unlimitedScans);
       
       expect(result.allowed, true);
+      expect(result.isSoftPrompt, false); // No soft prompt for business
+    });
+  });
+  
+  group('Feature.hasCost', () {
+    test('paid features have cost', () {
+      expect(Feature.cloudBoost.hasCost, true);
+      expect(Feature.exportPdf.hasCost, true);
+      expect(Feature.teamMode.hasCost, true);
+    });
+    
+    test('offline features have no cost', () {
+      expect(Feature.unlimitedScans.hasCost, false);
+      expect(Feature.unlimitedSearches.hasCost, false);
+      expect(Feature.unlimitedFollowups.hasCost, false);
     });
   });
 }

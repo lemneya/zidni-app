@@ -141,14 +141,24 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
-          'فعّل قوة Zidni الكاملة',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+        RichText(
+          textDirection: TextDirection.rtl,
           textAlign: TextAlign.center,
+          text: const TextSpan(
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+            children: [
+              TextSpan(text: 'فعّل قوة '),
+              TextSpan(
+                text: 'Zidni',
+                style: TextStyle(fontFamily: 'Roboto'),
+              ),
+              TextSpan(text: ' الكاملة'),
+            ],
+          ),
         ),
         const SizedBox(height: 8),
         Text(
