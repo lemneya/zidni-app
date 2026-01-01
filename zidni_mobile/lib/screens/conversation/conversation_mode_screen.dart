@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:zidni_mobile/services/stt_engine.dart';
 import 'package:zidni_mobile/eyes/eyes.dart';
+import 'package:zidni_mobile/os/os.dart';
 import 'package:zidni_mobile/services/translation_service.dart';
 import 'package:zidni_mobile/services/tts_service.dart';
 import 'package:zidni_mobile/services/intro_message_service.dart';
@@ -200,6 +201,17 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     final transcript = payload.transcript;
     if (transcript.isEmpty || _recordingLang == null) return;
     
+    // Gate OS-1: Check for voice commands before processing translation
+    final voiceCommand = VoiceCommandRouter.detectCommand(transcript);
+    if (voiceCommand.isCommand && VoiceCommandRouter.isPureCommand(transcript)) {
+      await widget.sttEngine.stopListening();
+      setState(() {
+        _recordingLang = null;
+      });
+      _handleVoiceCommand(voiceCommand);
+      return;
+    }
+    
     final from = _recordingLang!;
     final to = from == TurnLang.ar ? TurnLang.target : TurnLang.ar;
     
@@ -348,10 +360,16 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
             icon: const Icon(Icons.close, color: Colors.white),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          actions: const [
+          actions: [
+            // History button (Gate OS-1)
+            IconButton(
+              icon: const Icon(Icons.history, color: Colors.white),
+              onPressed: _openHistory,
+              tooltip: 'السجل',
+            ),
             // Eyes scan button (Gate EYES-1)
-            EyesScanButton(size: 24, color: Colors.white),
-            SizedBox(width: 8),
+            const EyesScanButton(size: 24, color: Colors.white),
+            const SizedBox(width: 8),
           ],
         ),
         body: SafeArea(
@@ -1089,6 +1107,46 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
         targetLang: _selectedTarget,
         ttsService: _ttsService,
         isDisabled: _recordingLang != null,
+      ),
+    );
+  }
+  
+  /// Gate OS-1: Handle voice commands detected from STT
+  void _handleVoiceCommand(VoiceCommandResult command) {
+    switch (command.type) {
+      case VoiceCommandType.openEyes:
+        _openEyesScan();
+        break;
+      case VoiceCommandType.none:
+        // Should not reach here, but handle gracefully
+        break;
+    }
+  }
+  
+  /// Gate OS-1: Open Eyes scan screen
+  void _openEyesScan() {
+    // Show feedback that command was recognized
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('جاري فتح المسح...'),
+        backgroundColor: Colors.purple,
+        duration: Duration(seconds: 1),
+      ),
+    );
+    
+    // Navigate to Eyes scan screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const EyesScanScreen(),
+      ),
+    );
+  }
+  
+  /// Gate OS-1: Open unified history screen
+  void _openHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const UnifiedHistoryScreen(),
       ),
     );
   }
