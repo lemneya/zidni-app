@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:zidni_mobile/services/stt_engine.dart';
 import 'package:zidni_mobile/eyes/eyes.dart';
 import 'package:zidni_mobile/os/os.dart';
+import 'package:zidni_mobile/context/context.dart';
 import 'package:zidni_mobile/services/translation_service.dart';
 import 'package:zidni_mobile/services/tts_service.dart';
 import 'package:zidni_mobile/services/intro_message_service.dart';
@@ -169,6 +170,17 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     if (_useLocationDefault) {
       await _applyLocationDefault();
     }
+    
+    // Gate LOC-1: Show context suggestion modal if needed
+    if (mounted) {
+      ContextSuggestionModal.showIfNeeded(
+        context,
+        onPackSelected: () {
+          // Refresh to apply pack settings
+          _applyContextPackSettings();
+        },
+      );
+    }
   }
   
   Future<void> _applyLocationDefault() async {
@@ -320,6 +332,49 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
     await _prefsService.setLoudMode(value);
   }
   
+  // Gate LOC-1: Context Pack handlers
+  void _onContextPackChanged(ContextPack pack) {
+    _applyContextPackSettings();
+  }
+  
+  Future<void> _applyContextPackSettings() async {
+    final pack = await ContextService.getSelectedPack();
+    
+    // Apply default language pair
+    final langPair = pack.defaultLangPair;
+    TargetLang newTarget;
+    switch (langPair.targetCode) {
+      case 'zh':
+        newTarget = TargetLang.zh;
+        break;
+      case 'en':
+        newTarget = TargetLang.en;
+        break;
+      case 'es':
+        newTarget = TargetLang.es;
+        break;
+      default:
+        newTarget = TargetLang.en;
+    }
+    
+    // Apply loud mode default
+    final shouldEnableLoud = pack.loudModeDefault;
+    
+    setState(() {
+      _selectedTarget = newTarget;
+      if (shouldEnableLoud && !_loudMode) {
+        _loudMode = true;
+        _ttsService.setLoudMode(true);
+      }
+    });
+    
+    // Save preferences
+    await _prefsService.setLastSelectedTarget(newTarget);
+    if (shouldEnableLoud) {
+      await _prefsService.setLoudMode(true);
+    }
+  }
+  
   void _enterHandoffMode() {
     if (_recordingLang != null) return;
     setState(() {
@@ -377,6 +432,14 @@ class _ConversationModeScreenState extends State<ConversationModeScreen>
             children: [
               // Settings row (location + loud mode)
               _buildSettingsRow(),
+              
+              // Context Pack Mode Selector (Gate LOC-1)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: ModeSelectorChip(
+                  onPackChanged: _onContextPackChanged,
+                ),
+              ),
               
               // Location auto-selection chip
               if (_locationAutoApplied && _detectedCountryCode != null)
