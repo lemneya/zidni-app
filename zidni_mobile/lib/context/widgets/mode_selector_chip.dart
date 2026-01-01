@@ -82,6 +82,7 @@ class _ModeSelectorChipState extends State<ModeSelectorChip> {
               Text(
                 'الوضع:',
                 style: TextStyle(
+                  fontFamily: 'NotoSansArabic',
                   color: Colors.white.withOpacity(0.7),
                   fontSize: 12,
                 ),
@@ -100,6 +101,7 @@ class _ModeSelectorChipState extends State<ModeSelectorChip> {
               Text(
                 _currentPack!.titleAr,
                 style: TextStyle(
+                  fontFamily: 'NotoSansArabic',
                   color: _currentPack!.themeColor,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -117,6 +119,7 @@ class _ModeSelectorChipState extends State<ModeSelectorChip> {
                 child: Text(
                   'تغيير',
                   style: TextStyle(
+                    fontFamily: 'NotoSansArabic',
                     color: _currentPack!.themeColor,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,

@@ -7,17 +7,25 @@ import 'package:zidni_mobile/context/context.dart';
 
 /// Load fonts before running golden tests
 Future<void> loadFonts() async {
-  // Load NotoSansArabic
-  final arabicFontLoader = FontLoader('NotoSansArabic');
-  final arabicFontData = File('assets/fonts/NotoSansArabic-Regular.ttf').readAsBytesSync();
-  arabicFontLoader.addFont(Future.value(ByteData.view(arabicFontData.buffer)));
-  await arabicFontLoader.load();
+  TestWidgetsFlutterBinding.ensureInitialized();
   
-  // Load Roboto
+  // Load NotoSansArabic from file
+  final arabicFontLoader = FontLoader('NotoSansArabic');
+  final arabicFontFile = File('assets/fonts/NotoSansArabic-Regular.ttf');
+  if (arabicFontFile.existsSync()) {
+    final arabicFontData = arabicFontFile.readAsBytesSync();
+    arabicFontLoader.addFont(Future.value(ByteData.view(arabicFontData.buffer)));
+    await arabicFontLoader.load();
+  }
+  
+  // Load Roboto from file
   final robotoLoader = FontLoader('Roboto');
-  final robotoFontData = File('assets/fonts/Roboto-Regular.ttf').readAsBytesSync();
-  robotoLoader.addFont(Future.value(ByteData.view(robotoFontData.buffer)));
-  await robotoLoader.load();
+  final robotoFontFile = File('assets/fonts/Roboto-Regular.ttf');
+  if (robotoFontFile.existsSync()) {
+    final robotoFontData = robotoFontFile.readAsBytesSync();
+    robotoLoader.addFont(Future.value(ByteData.view(robotoFontData.buffer)));
+    await robotoLoader.load();
+  }
 }
 
 /// Arabic-enabled theme for golden tests
@@ -25,7 +33,26 @@ ThemeData get arabicTheme => ThemeData(
   fontFamily: 'NotoSansArabic',
   brightness: Brightness.dark,
   scaffoldBackgroundColor: const Color(0xFF0F0F23),
+  textTheme: const TextTheme(
+    bodyLarge: TextStyle(fontFamily: 'NotoSansArabic'),
+    bodyMedium: TextStyle(fontFamily: 'NotoSansArabic'),
+    bodySmall: TextStyle(fontFamily: 'NotoSansArabic'),
+    titleLarge: TextStyle(fontFamily: 'NotoSansArabic'),
+    titleMedium: TextStyle(fontFamily: 'NotoSansArabic'),
+    titleSmall: TextStyle(fontFamily: 'NotoSansArabic'),
+    labelLarge: TextStyle(fontFamily: 'NotoSansArabic'),
+    labelMedium: TextStyle(fontFamily: 'NotoSansArabic'),
+    labelSmall: TextStyle(fontFamily: 'NotoSansArabic'),
+  ),
 );
+
+/// Widget wrapper that applies Arabic font to all text
+Widget withArabicFont(Widget child) {
+  return DefaultTextStyle(
+    style: const TextStyle(fontFamily: 'NotoSansArabic'),
+    child: child,
+  );
+}
 
 void main() {
   setUpAll(() async {
@@ -46,8 +73,8 @@ void main() {
           theme: arabicTheme,
           home: Scaffold(
             backgroundColor: const Color(0xFF1A1A2E),
-            body: const Center(
-              child: ModeSelectorChip(),
+            body: Center(
+              child: withArabicFont(const ModeSelectorChip()),
             ),
           ),
         ),
@@ -69,8 +96,8 @@ void main() {
           theme: arabicTheme,
           home: Scaffold(
             backgroundColor: const Color(0xFF1A1A2E),
-            body: const Center(
-              child: ModeSelectorChip(),
+            body: Center(
+              child: withArabicFont(const ModeSelectorChip()),
             ),
           ),
         ),
@@ -92,8 +119,8 @@ void main() {
           theme: arabicTheme,
           home: Scaffold(
             backgroundColor: const Color(0xFF1A1A2E),
-            body: const Center(
-              child: ModeSelectorChip(),
+            body: Center(
+              child: withArabicFont(const ModeSelectorChip()),
             ),
           ),
         ),
@@ -115,8 +142,10 @@ void main() {
           theme: arabicTheme,
           home: Scaffold(
             backgroundColor: const Color(0xFF1A1A2E),
-            body: ModePickerSheet(
-              currentPack: ContextPacks.guangzhouCantonFair,
+            body: withArabicFont(
+              ModePickerSheet(
+                currentPack: ContextPacks.guangzhouCantonFair,
+              ),
             ),
           ),
         ),
@@ -136,8 +165,10 @@ void main() {
           theme: arabicTheme,
           home: Scaffold(
             backgroundColor: const Color(0xFF1A1A2E),
-            body: ModePickerSheet(
-              currentPack: ContextPacks.usa,
+            body: withArabicFont(
+              ModePickerSheet(
+                currentPack: ContextPacks.usa,
+              ),
             ),
           ),
         ),
@@ -160,8 +191,10 @@ void main() {
           home: Scaffold(
             backgroundColor: const Color(0xFF1A1A2E),
             body: Center(
-              child: ContextSuggestionModal(
-                suggestedPack: ContextPacks.guangzhouCantonFair,
+              child: withArabicFont(
+                ContextSuggestionModal(
+                  suggestedPack: ContextPacks.guangzhouCantonFair,
+                ),
               ),
             ),
           ),
@@ -183,8 +216,10 @@ void main() {
           home: Scaffold(
             backgroundColor: const Color(0xFF1A1A2E),
             body: Center(
-              child: ContextSuggestionModal(
-                suggestedPack: ContextPacks.travelDefault,
+              child: withArabicFont(
+                ContextSuggestionModal(
+                  suggestedPack: ContextPacks.travelDefault,
+                ),
               ),
             ),
           ),

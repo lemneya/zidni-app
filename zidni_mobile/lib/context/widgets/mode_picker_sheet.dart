@@ -85,6 +85,7 @@ class _ModePickerSheetState extends State<ModePickerSheet> {
                           Text(
                             'اختر الوضع',
                             style: TextStyle(
+                              fontFamily: 'NotoSansArabic',
                               color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -94,6 +95,7 @@ class _ModePickerSheetState extends State<ModePickerSheet> {
                           Text(
                             'حدد سياق استخدامك لتجربة مخصصة',
                             style: TextStyle(
+                              fontFamily: 'NotoSansArabic',
                               color: Colors.white70,
                               fontSize: 12,
                             ),
@@ -142,6 +144,7 @@ class _ModePickerSheetState extends State<ModePickerSheet> {
                     child: const Text(
                       'حفظ',
                       style: TextStyle(
+                        fontFamily: 'NotoSansArabic',
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -232,6 +235,7 @@ class _ModePickerSheetState extends State<ModePickerSheet> {
                   Text(
                     pack.titleAr,
                     style: TextStyle(
+                      fontFamily: 'NotoSansArabic',
                       color: isSelected ? pack.themeColor : Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -241,6 +245,7 @@ class _ModePickerSheetState extends State<ModePickerSheet> {
                   Text(
                     pack.descriptionAr,
                     style: TextStyle(
+                      fontFamily: 'NotoSansArabic',
                       color: Colors.white.withOpacity(0.6),
                       fontSize: 12,
                     ),
@@ -256,6 +261,7 @@ class _ModePickerSheetState extends State<ModePickerSheet> {
                     child: Text(
                       pack.defaultLangPair.arabicName,
                       style: TextStyle(
+                        fontFamily: 'NotoSansArabic',
                         color: pack.themeColor,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,

@@ -100,6 +100,7 @@ class ContextSuggestionModal extends StatelessWidget {
               const Text(
                 'مرحباً بك في Zidni!',
                 style: TextStyle(
+                  fontFamily: 'NotoSansArabic',
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -112,6 +113,7 @@ class ContextSuggestionModal extends StatelessWidget {
               Text(
                 'يبدو أنك في ${suggestedPack.titleAr}',
                 style: TextStyle(
+                  fontFamily: 'NotoSansArabic',
                   color: Colors.white.withOpacity(0.7),
                   fontSize: 14,
                 ),
@@ -121,6 +123,7 @@ class ContextSuggestionModal extends StatelessWidget {
               Text(
                 'هل تريد تفعيل الوضع المناسب؟',
                 style: TextStyle(
+                  fontFamily: 'NotoSansArabic',
                   color: Colors.white.withOpacity(0.7),
                   fontSize: 14,
                 ),
@@ -152,6 +155,7 @@ class ContextSuggestionModal extends StatelessWidget {
                         Text(
                           suggestedPack.titleAr,
                           style: TextStyle(
+                            fontFamily: 'NotoSansArabic',
                             color: suggestedPack.themeColor,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -163,6 +167,7 @@ class ContextSuggestionModal extends StatelessWidget {
                     Text(
                       suggestedPack.descriptionAr,
                       style: TextStyle(
+                        fontFamily: 'NotoSansArabic',
                         color: Colors.white.withOpacity(0.6),
                         fontSize: 12,
                       ),
@@ -205,6 +210,7 @@ class ContextSuggestionModal extends StatelessWidget {
                   child: const Text(
                     'نعم، فعّل هذا الوضع',
                     style: TextStyle(
+                      fontFamily: 'NotoSansArabic',
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -219,6 +225,7 @@ class ContextSuggestionModal extends StatelessWidget {
                 child: Text(
                   'لا، سأختار لاحقاً',
                   style: TextStyle(
+                    fontFamily: 'NotoSansArabic',
                     color: Colors.white.withOpacity(0.5),
                     fontSize: 14,
                   ),
@@ -250,6 +257,7 @@ class ContextSuggestionModal extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
+              fontFamily: 'NotoSansArabic',
               color: suggestedPack.themeColor,
               fontSize: 11,
               fontWeight: FontWeight.bold,
