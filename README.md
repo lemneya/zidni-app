@@ -33,24 +33,39 @@ Zidni's first real-world test: Canton Fair 2025. Features are designed for:
 - **No scheduling/notifications** without explicit approval
 - **flutter analyze** must pass with no issues
 
-## Project Structure
+## GUL-first OS
 
+Zidni is built on a **GUL-first (Voice-first) Operating System**. This means voice is the primary input, and all user interactions are routed through the GUL (Global Understanding Layer). The GUL is responsible for understanding user intent, translating speech, and orchestrating the various services within the app. This architecture ensures a seamless, hands-free experience for the user, which is critical in the fast-paced environment of the Canton Fair.
+
+## Quick Start
+
+To get started with Zidni, run the following commands:
+
+```bash
+# Run the app
+flutter run
+
+# Run tests
+flutter test
 ```
-zidni-app/
-├── zidni_mobile/          # Flutter mobile app
-│   ├── lib/
-│   │   ├── models/        # Data models
-│   │   ├── screens/       # App screens
-│   │   ├── services/      # Business logic
-│   │   ├── widgets/       # Reusable widgets
-│   │   └── packs/         # Context packs (phrases, templates)
-│   └── pubspec.yaml
-├── local_companion/       # Python server for offline STT/LLM
-├── docs/                  # Documentation
-│   └── GATEKEEPER_CHARTER.md
-└── .github/
-    └── pull_request_template.md
-```
+
+## Repository Map
+
+The repository is organized as follows:
+
+- `docs/`
+  - `ONBOARDING.md`: A guide for new developers to get started with the project.
+  - `GATES.md`: Documents the gatekeeper protocol for feature development.
+  - `OFFLINE_FIRST.md`: Defines the offline-first architecture and principles.
+  - `ARCHITECTURE.md`: System overview and service boundaries.
+- `lib/`
+  - `core/`: Core components and services.
+  - `models/`: Data models.
+  - `services/`: Business logic and services.
+  - `widgets/`: Reusable UI components.
+- `test/`
+  - `golden_baseline/`: Golden file tests for UI regression testing.
+- `.github/`: GitHub-specific files, including workflows and PR templates.
 
 ## Tags (Release History)
 
