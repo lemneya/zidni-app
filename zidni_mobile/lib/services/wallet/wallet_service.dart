@@ -5,14 +5,23 @@ import '../../models/wallet_models.dart';
 /// Currently returns local in-memory/mock state (0 balance, empty tx list).
 /// Future versions will integrate with payment providers.
 class WalletService {
-  WalletState _state = WalletState.empty();
-  final StreamController<WalletState> _stateController =
-      StreamController<WalletState>.broadcast();
-
-  WalletService() {
+  // Singleton pattern
+  WalletService._internal() {
     // Initialize with empty state
     _stateController.add(_state);
   }
+
+  static final WalletService _instance = WalletService._internal();
+  
+  /// Returns the singleton instance of WalletService.
+  static WalletService get instance => _instance;
+  
+  /// Factory constructor that returns the singleton instance.
+  factory WalletService() => _instance;
+
+  WalletState _state = WalletState.empty();
+  final StreamController<WalletState> _stateController =
+      StreamController<WalletState>.broadcast();
 
   /// Returns the current wallet state.
   WalletState get currentState => _state;
