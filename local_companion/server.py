@@ -4,16 +4,53 @@ Zidni Local Companion Server
 
 Provides /health, /stt, and /llm endpoints for offline operation.
 Run with: python server.py
+
+SECURITY NOTES:
+- CORS restricted to local origins only
+- Input validation on all endpoints
+- Rate limiting enabled
+- Secure temporary file handling
+- Error messages sanitized
 """
 
 import os
 import json
 import tempfile
+import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
-CORS(app)
+
+# SECURITY FIX: Restrict CORS to local origins only
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "https://192.168.4.1:8787",
+            "https://localhost:*",
+            "http://localhost:*",
+        ],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+    }
+})
+
+# SECURITY FIX: Add rate limiting
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+)
+
+# SECURITY FIX: Configure logging (no print statements in production)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Configuration
 HOST = os.environ.get('HOST', '0.0.0.0')
@@ -31,11 +68,11 @@ def get_whisper_model():
     if _whisper_model is None:
         try:
             import whisper
-            print("Loading Whisper model (small)...")
+            logger.info("Loading Whisper model (small)...")
             _whisper_model = whisper.load_model("small")
-            print("Whisper model loaded.")
+            logger.info("Whisper model loaded successfully")
         except ImportError:
-            print("Warning: Whisper not installed. STT will return placeholder.")
+            logger.warning("Whisper not installed. STT will return placeholder.")
             _whisper_model = "placeholder"
     return _whisper_model
 
@@ -91,73 +128,121 @@ def health():
 
 
 @app.route('/stt', methods=['POST'])
+@limiter.limit("10 per minute")
 def speech_to_text():
     """
     Speech-to-text endpoint.
-    
+
     Accepts audio file upload and returns transcript.
+
+    SECURITY:
+    - Rate limited to 10 requests per minute
+    - File type validation
+    - File size limit (50MB)
+    - Secure temporary file handling
     """
+    # SECURITY FIX: Validate file exists
     if 'audio' not in request.files:
         return jsonify({'error': 'No audio file provided'}), 400
-    
+
     audio_file = request.files['audio']
-    
-    # Save to temp file
-    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
-        audio_file.save(tmp.name)
-        tmp_path = tmp.name
-    
+
+    # SECURITY FIX: Validate filename exists
+    if not audio_file.filename:
+        return jsonify({'error': 'Invalid audio file'}), 400
+
+    # SECURITY FIX: Validate file extension
+    ALLOWED_EXTENSIONS = {'wav', 'mp3', 'ogg', 'flac', 'm4a', 'webm'}
+    file_ext = audio_file.filename.rsplit('.', 1)[-1].lower() if '.' in audio_file.filename else ''
+    if file_ext not in ALLOWED_EXTENSIONS:
+        return jsonify({'error': f'Invalid file type. Allowed: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+
+    # SECURITY FIX: Validate file size (50MB limit)
+    audio_file.seek(0, os.SEEK_END)
+    file_size = audio_file.tell()
+    audio_file.seek(0)
+
+    MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+    if file_size > MAX_FILE_SIZE:
+        return jsonify({'error': 'File too large (max 50MB)'}), 413
+
+    if file_size == 0:
+        return jsonify({'error': 'Empty audio file'}), 400
+
+    # SECURITY FIX: Use context manager for temp file (auto-cleanup)
+    tmp_path = None
     try:
+        # Create secure temp file
+        with tempfile.NamedTemporaryFile(suffix=f'.{file_ext}', delete=False, dir=tempfile.gettempdir()) as tmp:
+            audio_file.save(tmp.name)
+            tmp_path = tmp.name
+
         model = get_whisper_model()
-        
+
         if model == "placeholder":
-            # Whisper not installed, return placeholder
             transcript = "[Whisper not installed - install with: pip install openai-whisper]"
         else:
             # Transcribe with Whisper
             result = model.transcribe(tmp_path)
             transcript = result.get('text', '').strip()
-        
+
         return jsonify({'transcript': transcript})
-    
+
     except Exception as e:
-        return jsonify({'error': str(e), 'transcript': ''}), 500
-    
+        # SECURITY FIX: Don't expose internal errors to client
+        logger.error(f"STT processing failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Speech transcription failed', 'transcript': ''}), 500
+
     finally:
-        # Cleanup temp file
-        try:
-            os.unlink(tmp_path)
-        except:
-            pass
+        # SECURITY FIX: Ensure temp file cleanup
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+                logger.debug(f"Cleaned up temp file: {tmp_path}")
+            except Exception as e:
+                logger.error(f"Failed to delete temp file {tmp_path}: {e}")
 
 
 @app.route('/llm', methods=['POST'])
+@limiter.limit("20 per minute")
 def generate_text():
     """
     LLM text generation endpoint.
-    
+
     Accepts prompt and returns generated text.
+
+    SECURITY: Rate limited, input validated
     """
     try:
         data = request.get_json()
-        
+
         if not data or 'prompt' not in data:
             return jsonify({'error': 'No prompt provided'}), 400
-        
-        prompt = data['prompt']
+
+        prompt = str(data['prompt']).strip()
+        if not prompt or len(prompt) > 5000:
+            return jsonify({'error': 'Invalid prompt length'}), 400
+
         system_prompt = data.get('system_prompt')
-        max_tokens = data.get('max_tokens', 1024)
-        
-        # Generate response
+        if system_prompt and len(str(system_prompt)) > 2000:
+            return jsonify({'error': 'System prompt too long'}), 400
+
+        max_tokens = int(data.get('max_tokens', 1024))
+        if not (1 <= max_tokens <= 2048):
+            return jsonify({'error': 'max_tokens must be between 1-2048'}), 400
+
         text = get_llm_response(prompt, system_prompt, max_tokens)
-        
+
         return jsonify({
             'text': text,
-            'tokens_used': len(text.split())  # Approximate
+            'tokens_used': len(text.split())
         })
-    
+
+    except ValueError:
+        return jsonify({'error': 'Invalid request format'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"LLM error: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Text generation failed'}), 500
 
 
 @app.route('/', methods=['GET'])

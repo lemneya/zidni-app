@@ -1,26 +1,29 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zidni_mobile/billing/models/entitlement.dart';
+import 'package:zidni_mobile/core/secure_storage_service.dart';
 
 /// Entitlement Service
 /// Gate BILL-1: Entitlements + Usage Meter + Paywall
 ///
 /// Single source of truth for user's subscription state
+///
+/// SECURITY: Uses SecureStorageService to prevent local tampering
+/// with subscription status (e.g., users upgrading themselves to business tier)
 
 class EntitlementService {
   static const String _storageKey = 'zidni_entitlement';
-  
+  static final _secureStorage = SecureStorageService();
+
   // Cached entitlement for quick access
   static Entitlement? _cachedEntitlement;
-  
+
   /// Get the current entitlement (cached for performance)
   static Future<Entitlement> getEntitlement() async {
     if (_cachedEntitlement != null) {
       return _cachedEntitlement!;
     }
-    
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString(_storageKey);
+
+    final json = await _secureStorage.read(_storageKey);
     
     if (json != null) {
       try {
@@ -41,8 +44,7 @@ class EntitlementService {
   
   /// Update the entitlement
   static Future<void> setEntitlement(Entitlement entitlement) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storageKey, jsonEncode(entitlement.toJson()));
+    await _secureStorage.write(_storageKey, jsonEncode(entitlement.toJson()));
     _cachedEntitlement = entitlement;
   }
   

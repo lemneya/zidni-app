@@ -7,8 +7,18 @@ zidni_mobile/android/local.properties
 
 # Environment and IDE
 .env
+.env.production
+.env.staging
 .vscode/
 .idx/
+
+# TLS/SSL Certificates
+*.pem
+*.key
+*.crt
+*.csr
+local_companion/cert.pem
+local_companion/key.pem
 
 # Dependencies
 vendor/
