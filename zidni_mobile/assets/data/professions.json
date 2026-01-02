@@ -1,0 +1,77 @@
+{
+  "professions": [
+    {
+      "id": "trader_importer",
+      "name_ar": "تاجر/مستورد",
+      "name_en": "Trader/Importer",
+      "icon": "business",
+      "subCategories": []
+    },
+    {
+      "id": "manufacturer",
+      "name_ar": "مصنّع",
+      "name_en": "Manufacturer",
+      "icon": "factory",
+      "subCategories": []
+    },
+    {
+      "id": "service_provider",
+      "name_ar": "مقدم خدمات",
+      "name_en": "Service Provider",
+      "icon": "build",
+      "subCategories": [
+        {
+          "id": "carpenter",
+          "name_ar": "نجار",
+          "name_en": "Carpenter"
+        },
+        {
+          "id": "electrician",
+          "name_ar": "كهربائي",
+          "name_en": "Electrician"
+        },
+        {
+          "id": "plumber",
+          "name_ar": "سباك",
+          "name_en": "Plumber"
+        },
+        {
+          "id": "mechanic",
+          "name_ar": "ميكانيكي",
+          "name_en": "Mechanic"
+        },
+        {
+          "id": "driver",
+          "name_ar": "سائق",
+          "name_en": "Driver"
+        },
+        {
+          "id": "other_service",
+          "name_ar": "أخرى",
+          "name_en": "Other"
+        }
+      ]
+    },
+    {
+      "id": "student",
+      "name_ar": "طالب",
+      "name_en": "Student",
+      "icon": "school",
+      "subCategories": []
+    },
+    {
+      "id": "traveler",
+      "name_ar": "مسافر",
+      "name_en": "Traveler",
+      "icon": "flight",
+      "subCategories": []
+    },
+    {
+      "id": "other",
+      "name_ar": "أخرى",
+      "name_en": "Other",
+      "icon": "more_horiz",
+      "subCategories": []
+    }
+  ]
+}
