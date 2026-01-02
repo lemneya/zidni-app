@@ -1,12 +1,18 @@
 /// Audio Pipeline Service for Call Companion Mode
 /// Manages the complete audio processing flow:
 /// Recording → Transcription → Translation → TTS Output
+///
+/// Supports multiple language pairs:
+/// - Chinese ↔ Arabic
+/// - English ↔ Arabic
+/// - Turkish ↔ Arabic
 
 import 'dart:async';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../../models/call_companion/audio_chunk.dart';
+import '../../models/call_companion/supported_language.dart';
 import 'whisper_stt_service.dart';
 import 'mlkit_translation_service.dart';
 import 'tts_to_file_service.dart';
@@ -34,10 +40,10 @@ enum PipelineState {
 
 /// Mode of operation for the pipeline
 enum PipelineMode {
-  /// LISTEN mode: Capture Chinese → Show Arabic translation
+  /// LISTEN mode: Capture foreign language → Show Arabic translation
   listen,
 
-  /// SPEAK mode: Capture Arabic → Speak Chinese translation
+  /// SPEAK mode: Capture Arabic → Speak foreign language translation
   speak,
 }
 
@@ -52,6 +58,12 @@ class PipelineResult {
   /// Translated text in target language
   final String translatedText;
 
+  /// Source language
+  final SupportedLanguage sourceLanguage;
+
+  /// Target language
+  final SupportedLanguage targetLanguage;
+
   /// Path to TTS output file (only for SPEAK mode)
   final String? ttsOutputPath;
 
@@ -62,6 +74,8 @@ class PipelineResult {
     required this.chunk,
     required this.transcribedText,
     required this.translatedText,
+    required this.sourceLanguage,
+    required this.targetLanguage,
     this.ttsOutputPath,
     required this.processingDurationMs,
   });
@@ -103,6 +117,9 @@ class AudioPipelineService {
   /// Current pipeline mode
   PipelineMode? _currentMode;
 
+  /// Current target language (for LISTEN: foreign language, for SPEAK: foreign language)
+  SupportedLanguage _targetLanguage = SupportedLanguage.chinese;
+
   /// State change callback
   PipelineStateCallback? onStateChanged;
 
@@ -130,11 +147,22 @@ class AudioPipelineService {
   /// Get current mode
   PipelineMode? get currentMode => _currentMode;
 
+  /// Get current target language
+  SupportedLanguage get targetLanguage => _targetLanguage;
+
   /// Check if pipeline is active
   bool get isActive => _state != PipelineState.idle && _state != PipelineState.error;
 
   /// Check if recording
   bool get isRecording => _state == PipelineState.recording;
+
+  /// Set target language for translation
+  void setTargetLanguage(SupportedLanguage language) {
+    if (language == SupportedLanguage.arabic) {
+      throw ArgumentError('Target language cannot be Arabic. Arabic is always the user\'s language.');
+    }
+    _targetLanguage = language;
+  }
 
   /// Initialize the pipeline
   Future<bool> initialize() async {
@@ -150,13 +178,21 @@ class AudioPipelineService {
     }
   }
 
-  /// Start recording in LISTEN mode (Chinese → Arabic)
-  Future<void> startListening() async {
+  /// Start recording in LISTEN mode (Foreign → Arabic)
+  /// [language] - The foreign language being spoken (Chinese, English, or Turkish)
+  Future<void> startListening({SupportedLanguage? language}) async {
+    if (language != null) {
+      setTargetLanguage(language);
+    }
     await _startRecording(PipelineMode.listen);
   }
 
-  /// Start recording in SPEAK mode (Arabic → Chinese)
-  Future<void> startSpeaking() async {
+  /// Start recording in SPEAK mode (Arabic → Foreign)
+  /// [language] - The foreign language to translate to (Chinese, English, or Turkish)
+  Future<void> startSpeaking({SupportedLanguage? language}) async {
+    if (language != null) {
+      setTargetLanguage(language);
+    }
     await _startRecording(PipelineMode.speak);
   }
 
@@ -204,18 +240,18 @@ class AudioPipelineService {
       // TODO: Stop actual recording
       // await Record().stop();
 
+      // Determine source language based on mode
+      final sourceLanguage = mode == PipelineMode.listen 
+          ? _targetLanguage  // LISTEN: foreign language → Arabic
+          : SupportedLanguage.arabic;  // SPEAK: Arabic → foreign language
+
       // Create audio chunk
-      final chunk = mode == PipelineMode.listen
-          ? AudioChunk.chinese(
-              id: 'chunk_${++_chunkCounter}',
-              filePath: recordingPath,
-              durationMs: durationMs,
-            )
-          : AudioChunk.arabic(
-              id: 'chunk_${++_chunkCounter}',
-              filePath: recordingPath,
-              durationMs: durationMs,
-            );
+      final chunk = AudioChunk(
+        id: 'chunk_${++_chunkCounter}',
+        filePath: recordingPath,
+        durationMs: durationMs,
+        sourceLanguage: sourceLanguage.code,
+      );
 
       // Process the chunk
       return await _processChunk(chunk, mode);
@@ -229,19 +265,33 @@ class AudioPipelineService {
   Future<PipelineResult> _processChunk(AudioChunk chunk, PipelineMode mode) async {
     final processingStart = DateTime.now();
 
+    // Determine languages
+    final SupportedLanguage sourceLanguage;
+    final SupportedLanguage targetLang;
+    final LanguagePair translationPair;
+
+    if (mode == PipelineMode.listen) {
+      // LISTEN: Foreign → Arabic
+      sourceLanguage = _targetLanguage;
+      targetLang = SupportedLanguage.arabic;
+      translationPair = LanguagePair(source: _targetLanguage, target: SupportedLanguage.arabic);
+    } else {
+      // SPEAK: Arabic → Foreign
+      sourceLanguage = SupportedLanguage.arabic;
+      targetLang = _targetLanguage;
+      translationPair = LanguagePair(source: SupportedLanguage.arabic, target: _targetLanguage);
+    }
+
     // Step 1: Transcribe
     _setState(PipelineState.transcribing);
     final transcriptionResult = await _sttService.transcribe(
       audioPath: chunk.filePath,
-      language: chunk.sourceLanguage,
+      language: sourceLanguage.code,
     );
     final transcribedText = transcriptionResult.text;
 
     // Step 2: Translate
     _setState(PipelineState.translating);
-    final translationPair = mode == PipelineMode.listen
-        ? TranslationPair.chineseToArabic
-        : TranslationPair.arabicToChinese;
     final translationResult = await _translationService.translate(
       text: transcribedText,
       pair: translationPair,
@@ -252,11 +302,14 @@ class AudioPipelineService {
     String? ttsOutputPath;
     if (mode == PipelineMode.speak) {
       _setState(PipelineState.speaking);
-      final ttsResult = await _ttsService.synthesizeChineseToFile(translatedText);
+      final ttsResult = await _ttsService.synthesizeToFile(
+        text: translatedText,
+        language: targetLang,
+      );
       ttsOutputPath = ttsResult.filePath;
 
       // Also speak it aloud
-      await _ttsService.speak(text: translatedText, languageCode: 'zh');
+      await _ttsService.speak(text: translatedText, language: targetLang);
     }
 
     // Update chunk with results
@@ -271,6 +324,8 @@ class AudioPipelineService {
       chunk: chunk,
       transcribedText: transcribedText,
       translatedText: translatedText,
+      sourceLanguage: sourceLanguage,
+      targetLanguage: targetLang,
       ttsOutputPath: ttsOutputPath,
       processingDurationMs: processingDuration,
     );

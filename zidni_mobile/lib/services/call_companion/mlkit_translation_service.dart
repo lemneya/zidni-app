@@ -1,19 +1,18 @@
 /// ML Kit Translation Service for Call Companion Mode
 /// Provides offline translation using Google ML Kit on-device translation
 ///
+/// Supported Languages:
+/// - Arabic (ar) - User's language
+/// - Chinese (zh) - For Canton Fair / China
+/// - English (en) - For USA / International
+/// - Turkish (tr) - For Turkey / Turkish speakers
+///
 /// Note: This service wraps google_mlkit_translation for offline translation.
 /// Language models must be downloaded before use.
 
 import 'dart:async';
 
-/// Supported translation language pairs
-enum TranslationPair {
-  /// Chinese to Arabic
-  chineseToArabic,
-
-  /// Arabic to Chinese
-  arabicToChinese,
-}
+import '../../models/call_companion/supported_language.dart';
 
 /// Result of a translation operation
 class TranslationResultData {
@@ -23,11 +22,11 @@ class TranslationResultData {
   /// Translated text
   final String translatedText;
 
-  /// Source language code
-  final String sourceLanguage;
+  /// Source language
+  final SupportedLanguage sourceLanguage;
 
-  /// Target language code
-  final String targetLanguage;
+  /// Target language
+  final SupportedLanguage targetLanguage;
 
   TranslationResultData({
     required this.sourceText,
@@ -39,8 +38,8 @@ class TranslationResultData {
 
 /// Model download status
 class ModelDownloadStatus {
-  /// Language code
-  final String languageCode;
+  /// Language
+  final SupportedLanguage language;
 
   /// Whether the model is downloaded
   final bool isDownloaded;
@@ -51,11 +50,15 @@ class ModelDownloadStatus {
   /// Error message if download failed
   final String? error;
 
+  /// Model size in MB
+  final int sizeInMb;
+
   ModelDownloadStatus({
-    required this.languageCode,
+    required this.language,
     required this.isDownloaded,
     this.progress,
     this.error,
+    this.sizeInMb = 30,
   });
 }
 
@@ -71,34 +74,53 @@ class MlkitTranslationService {
 
   MlkitTranslationService._();
 
-  /// Whether Chinese model is ready
-  bool _chineseModelReady = false;
+  /// Model readiness status for each language
+  final Map<SupportedLanguage, bool> _modelStatus = {
+    SupportedLanguage.arabic: false,
+    SupportedLanguage.chinese: false,
+    SupportedLanguage.english: false,
+    SupportedLanguage.turkish: false,
+  };
 
-  /// Whether Arabic model is ready
-  bool _arabicModelReady = false;
+  /// Check if a specific language model is ready
+  bool isModelReady(SupportedLanguage language) => _modelStatus[language] ?? false;
+
+  /// Check if Arabic model is ready (always needed as target)
+  bool get isArabicModelReady => _modelStatus[SupportedLanguage.arabic] ?? false;
 
   /// Check if Chinese model is ready
-  bool get isChineseModelReady => _chineseModelReady;
+  bool get isChineseModelReady => _modelStatus[SupportedLanguage.chinese] ?? false;
 
-  /// Check if Arabic model is ready
-  bool get isArabicModelReady => _arabicModelReady;
+  /// Check if English model is ready
+  bool get isEnglishModelReady => _modelStatus[SupportedLanguage.english] ?? false;
 
-  /// Check if both models are ready for zh↔ar translation
-  bool get isReady => _chineseModelReady && _arabicModelReady;
+  /// Check if Turkish model is ready
+  bool get isTurkishModelReady => _modelStatus[SupportedLanguage.turkish] ?? false;
+
+  /// Check if a language pair is ready for translation
+  bool isPairReady(LanguagePair pair) {
+    return isModelReady(pair.source) && isModelReady(pair.target);
+  }
+
+  /// Get list of ready language pairs
+  List<LanguagePair> get readyPairs {
+    return LanguagePair.allPairs.where((pair) => isPairReady(pair)).toList();
+  }
 
   /// Initialize the service and check model availability
   Future<void> initialize() async {
     // Check if models are already downloaded
-    _chineseModelReady = await _checkModelDownloaded('zh');
-    _arabicModelReady = await _checkModelDownloaded('ar');
+    for (final language in SupportedLanguage.values) {
+      _modelStatus[language] = await _checkModelDownloaded(language);
+    }
   }
 
   /// Check if a language model is downloaded
-  Future<bool> _checkModelDownloaded(String languageCode) async {
+  Future<bool> _checkModelDownloaded(SupportedLanguage language) async {
     try {
       // TODO: Implement actual ML Kit model check
       // final modelManager = OnDeviceTranslatorModelManager();
-      // return await modelManager.isModelDownloaded(languageCode);
+      // return await modelManager.isModelDownloaded(language.code);
 
       // Placeholder - assume not downloaded initially
       return false;
@@ -109,16 +131,16 @@ class MlkitTranslationService {
 
   /// Download a language model
   ///
-  /// [languageCode] - Language code ('zh' or 'ar')
+  /// [language] - Language to download
   /// [onProgress] - Progress callback (0.0 to 1.0)
   Future<bool> downloadModel(
-    String languageCode, {
+    SupportedLanguage language, {
     void Function(double progress)? onProgress,
   }) async {
     try {
       // TODO: Implement actual ML Kit model download
       // final modelManager = OnDeviceTranslatorModelManager();
-      // await modelManager.downloadModel(languageCode);
+      // await modelManager.downloadModel(language.code);
 
       // Simulate download progress
       for (int i = 0; i <= 100; i += 10) {
@@ -127,11 +149,7 @@ class MlkitTranslationService {
       }
 
       // Update status
-      if (languageCode == 'zh') {
-        _chineseModelReady = true;
-      } else if (languageCode == 'ar') {
-        _arabicModelReady = true;
-      }
+      _modelStatus[language] = true;
 
       return true;
     } catch (e) {
@@ -140,17 +158,13 @@ class MlkitTranslationService {
   }
 
   /// Delete a downloaded language model
-  Future<bool> deleteModel(String languageCode) async {
+  Future<bool> deleteModel(SupportedLanguage language) async {
     try {
       // TODO: Implement actual ML Kit model deletion
       // final modelManager = OnDeviceTranslatorModelManager();
-      // await modelManager.deleteModel(languageCode);
+      // await modelManager.deleteModel(language.code);
 
-      if (languageCode == 'zh') {
-        _chineseModelReady = false;
-      } else if (languageCode == 'ar') {
-        _arabicModelReady = false;
-      }
+      _modelStatus[language] = false;
 
       return true;
     } catch (e) {
@@ -158,36 +172,29 @@ class MlkitTranslationService {
     }
   }
 
-  /// Translate text
+  /// Translate text between any supported language pair
   ///
   /// [text] - Text to translate
-  /// [pair] - Translation direction
+  /// [source] - Source language
+  /// [target] - Target language
   Future<TranslationResultData> translate({
     required String text,
-    required TranslationPair pair,
+    required SupportedLanguage source,
+    required SupportedLanguage target,
   }) async {
-    final sourceLanguage = pair == TranslationPair.chineseToArabic ? 'zh' : 'ar';
-    final targetLanguage = pair == TranslationPair.chineseToArabic ? 'ar' : 'zh';
-
     // Verify models are ready
-    if (sourceLanguage == 'zh' && !_chineseModelReady) {
-      throw Exception('Chinese model not downloaded');
+    if (!isModelReady(source)) {
+      throw Exception('${source.nameAr} model not downloaded');
     }
-    if (sourceLanguage == 'ar' && !_arabicModelReady) {
-      throw Exception('Arabic model not downloaded');
-    }
-    if (targetLanguage == 'zh' && !_chineseModelReady) {
-      throw Exception('Chinese model not downloaded');
-    }
-    if (targetLanguage == 'ar' && !_arabicModelReady) {
-      throw Exception('Arabic model not downloaded');
+    if (!isModelReady(target)) {
+      throw Exception('${target.nameAr} model not downloaded');
     }
 
     try {
       // TODO: Implement actual ML Kit translation
       // final translator = OnDeviceTranslator(
-      //   sourceLanguage: TranslateLanguage.values.byName(sourceLanguage),
-      //   targetLanguage: TranslateLanguage.values.byName(targetLanguage),
+      //   sourceLanguage: TranslateLanguage.values.byName(source.code),
+      //   targetLanguage: TranslateLanguage.values.byName(target.code),
       // );
       // final result = await translator.translateText(text);
 
@@ -196,20 +203,33 @@ class MlkitTranslationService {
 
       return TranslationResultData(
         sourceText: text,
-        translatedText: '[Translation placeholder - ML Kit integration pending]',
-        sourceLanguage: sourceLanguage,
-        targetLanguage: targetLanguage,
+        translatedText: '[Translation: $text → ${target.nameAr}]',
+        sourceLanguage: source,
+        targetLanguage: target,
       );
     } catch (e) {
       throw Exception('Translation failed: $e');
     }
   }
 
+  /// Translate using a language pair
+  Future<TranslationResultData> translatePair({
+    required String text,
+    required LanguagePair pair,
+    required bool fromSourceToTarget,
+  }) async {
+    final source = fromSourceToTarget ? pair.source : pair.target;
+    final target = fromSourceToTarget ? pair.target : pair.source;
+
+    return translate(text: text, source: source, target: target);
+  }
+
   /// Translate Chinese to Arabic
   Future<String> translateChineseToArabic(String text) async {
     final result = await translate(
       text: text,
-      pair: TranslationPair.chineseToArabic,
+      source: SupportedLanguage.chinese,
+      target: SupportedLanguage.arabic,
     );
     return result.translatedText;
   }
@@ -218,23 +238,75 @@ class MlkitTranslationService {
   Future<String> translateArabicToChinese(String text) async {
     final result = await translate(
       text: text,
-      pair: TranslationPair.arabicToChinese,
+      source: SupportedLanguage.arabic,
+      target: SupportedLanguage.chinese,
     );
     return result.translatedText;
   }
 
-  /// Get model status for both languages
+  /// Translate English to Arabic
+  Future<String> translateEnglishToArabic(String text) async {
+    final result = await translate(
+      text: text,
+      source: SupportedLanguage.english,
+      target: SupportedLanguage.arabic,
+    );
+    return result.translatedText;
+  }
+
+  /// Translate Arabic to English
+  Future<String> translateArabicToEnglish(String text) async {
+    final result = await translate(
+      text: text,
+      source: SupportedLanguage.arabic,
+      target: SupportedLanguage.english,
+    );
+    return result.translatedText;
+  }
+
+  /// Translate Turkish to Arabic
+  Future<String> translateTurkishToArabic(String text) async {
+    final result = await translate(
+      text: text,
+      source: SupportedLanguage.turkish,
+      target: SupportedLanguage.arabic,
+    );
+    return result.translatedText;
+  }
+
+  /// Translate Arabic to Turkish
+  Future<String> translateArabicToTurkish(String text) async {
+    final result = await translate(
+      text: text,
+      source: SupportedLanguage.arabic,
+      target: SupportedLanguage.turkish,
+    );
+    return result.translatedText;
+  }
+
+  /// Get model status for all languages
   Future<List<ModelDownloadStatus>> getModelStatuses() async {
-    return [
-      ModelDownloadStatus(
-        languageCode: 'zh',
-        isDownloaded: _chineseModelReady,
-      ),
-      ModelDownloadStatus(
-        languageCode: 'ar',
-        isDownloaded: _arabicModelReady,
-      ),
-    ];
+    return SupportedLanguage.values.map((language) {
+      return ModelDownloadStatus(
+        language: language,
+        isDownloaded: _modelStatus[language] ?? false,
+        sizeInMb: _getModelSize(language),
+      );
+    }).toList();
+  }
+
+  /// Get approximate model size in MB
+  int _getModelSize(SupportedLanguage language) {
+    switch (language) {
+      case SupportedLanguage.chinese:
+        return 30;
+      case SupportedLanguage.arabic:
+        return 30;
+      case SupportedLanguage.english:
+        return 25;
+      case SupportedLanguage.turkish:
+        return 28;
+    }
   }
 
   /// Release resources

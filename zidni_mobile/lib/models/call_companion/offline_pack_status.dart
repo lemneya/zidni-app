@@ -1,5 +1,11 @@
 /// Offline pack status model for Call Companion Mode
 /// Tracks download and readiness status of offline models
+/// 
+/// Supported Languages:
+/// - Arabic (required)
+/// - Chinese (for Canton Fair / China)
+/// - English (for USA / International)
+/// - Turkish (for Turkey)
 
 enum PackDownloadStatus {
   /// Not downloaded yet
@@ -16,7 +22,7 @@ enum PackDownloadStatus {
 }
 
 /// Status of a single offline pack/model
-class OfflinePackItem {
+class PackStatus {
   /// Pack identifier
   final String id;
 
@@ -41,7 +47,7 @@ class OfflinePackItem {
   /// Error message if failed
   String? errorMessage;
 
-  OfflinePackItem({
+  PackStatus({
     required this.id,
     required this.nameAr,
     required this.nameEn,
@@ -73,82 +79,141 @@ class OfflinePackItem {
   int get progressPercent => (progress * 100).round();
 }
 
+/// Alias for backward compatibility
+typedef OfflinePackItem = PackStatus;
+
 /// Overall status of all offline packs for Call Companion
 class OfflinePackStatus {
   /// Whisper STT model
-  final OfflinePackItem whisperModel;
+  final PackStatus whisperModel;
+
+  /// ML Kit Arabic language model (always required)
+  final PackStatus arabicTranslation;
 
   /// ML Kit Chinese language model
-  final OfflinePackItem chineseTranslation;
+  final PackStatus chineseTranslation;
 
-  /// ML Kit Arabic language model
-  final OfflinePackItem arabicTranslation;
+  /// ML Kit English language model
+  final PackStatus englishTranslation;
 
-  /// System TTS Chinese voice availability
-  bool chineseTtsAvailable;
+  /// ML Kit Turkish language model
+  final PackStatus turkishTranslation;
 
   /// System TTS Arabic voice availability
   bool arabicTtsAvailable;
 
+  /// System TTS Chinese voice availability
+  bool chineseTtsAvailable;
+
+  /// System TTS English voice availability
+  bool englishTtsAvailable;
+
+  /// System TTS Turkish voice availability
+  bool turkishTtsAvailable;
+
   OfflinePackStatus({
     required this.whisperModel,
-    required this.chineseTranslation,
     required this.arabicTranslation,
-    this.chineseTtsAvailable = false,
+    required this.chineseTranslation,
+    required this.englishTranslation,
+    required this.turkishTranslation,
     this.arabicTtsAvailable = false,
+    this.chineseTtsAvailable = false,
+    this.englishTtsAvailable = false,
+    this.turkishTtsAvailable = false,
   });
 
   /// Create default status with all packs not downloaded
   factory OfflinePackStatus.initial() {
     return OfflinePackStatus(
-      whisperModel: OfflinePackItem(
+      whisperModel: PackStatus(
         id: 'whisper_base',
         nameAr: 'نموذج التعرف على الكلام',
         nameEn: 'Speech Recognition Model',
         descriptionAr: 'نموذج Whisper للتعرف على الكلام بدون إنترنت',
         sizeBytes: 150 * 1024 * 1024, // ~150 MB for base model
       ),
-      chineseTranslation: OfflinePackItem(
+      arabicTranslation: PackStatus(
+        id: 'mlkit_ar',
+        nameAr: 'نموذج الترجمة العربية',
+        nameEn: 'Arabic Translation Model',
+        descriptionAr: 'نموذج الترجمة من وإلى العربية (مطلوب)',
+        sizeBytes: 30 * 1024 * 1024, // ~30 MB
+      ),
+      chineseTranslation: PackStatus(
         id: 'mlkit_zh',
         nameAr: 'نموذج الترجمة الصينية',
         nameEn: 'Chinese Translation Model',
         descriptionAr: 'نموذج الترجمة من وإلى الصينية',
         sizeBytes: 30 * 1024 * 1024, // ~30 MB
       ),
-      arabicTranslation: OfflinePackItem(
-        id: 'mlkit_ar',
-        nameAr: 'نموذج الترجمة العربية',
-        nameEn: 'Arabic Translation Model',
-        descriptionAr: 'نموذج الترجمة من وإلى العربية',
-        sizeBytes: 30 * 1024 * 1024, // ~30 MB
+      englishTranslation: PackStatus(
+        id: 'mlkit_en',
+        nameAr: 'نموذج الترجمة الإنجليزية',
+        nameEn: 'English Translation Model',
+        descriptionAr: 'نموذج الترجمة من وإلى الإنجليزية',
+        sizeBytes: 25 * 1024 * 1024, // ~25 MB
+      ),
+      turkishTranslation: PackStatus(
+        id: 'mlkit_tr',
+        nameAr: 'نموذج الترجمة التركية',
+        nameEn: 'Turkish Translation Model',
+        descriptionAr: 'نموذج الترجمة من وإلى التركية',
+        sizeBytes: 28 * 1024 * 1024, // ~28 MB
       ),
     );
   }
 
   /// Get all pack items as a list
-  List<OfflinePackItem> get allPacks => [
+  List<PackStatus> get allPacks => [
         whisperModel,
-        chineseTranslation,
         arabicTranslation,
+        chineseTranslation,
+        englishTranslation,
+        turkishTranslation,
       ];
 
-  /// Check if all required packs are ready
+  /// Get translation packs only
+  List<PackStatus> get translationPacks => [
+        arabicTranslation,
+        chineseTranslation,
+        englishTranslation,
+        turkishTranslation,
+      ];
+
+  /// Check if core packs are ready (Whisper + Arabic)
+  bool get corePacksReady =>
+      whisperModel.isReady && arabicTranslation.isReady;
+
+  /// Check if at least one language pair is ready (Arabic + one other)
+  bool get hasOneLanguagePairReady =>
+      arabicTranslation.isReady &&
+      (chineseTranslation.isReady ||
+          englishTranslation.isReady ||
+          turkishTranslation.isReady);
+
+  /// Check if all packs are ready
   bool get allPacksReady =>
       whisperModel.isReady &&
+      arabicTranslation.isReady &&
       chineseTranslation.isReady &&
-      arabicTranslation.isReady;
+      englishTranslation.isReady &&
+      turkishTranslation.isReady;
 
-  /// Check if TTS is ready for both languages
-  bool get ttsReady => chineseTtsAvailable && arabicTtsAvailable;
+  /// Check if TTS is ready for core languages
+  bool get coreTtsReady => arabicTtsAvailable;
 
-  /// Check if fully ready for offline use
-  bool get isFullyReady => allPacksReady && ttsReady;
+  /// Check if fully ready for offline use (core + at least one language pair)
+  bool get isFullyReady =>
+      corePacksReady && hasOneLanguagePairReady && coreTtsReady;
 
   /// Get total size of all packs
   int get totalSizeBytes =>
       whisperModel.sizeBytes +
+      arabicTranslation.sizeBytes +
       chineseTranslation.sizeBytes +
-      arabicTranslation.sizeBytes;
+      englishTranslation.sizeBytes +
+      turkishTranslation.sizeBytes;
 
   /// Get total size display
   String get totalSizeDisplay {
@@ -162,17 +227,54 @@ class OfflinePackStatus {
   /// Get total number of packs
   int get totalPacksCount => allPacks.length;
 
+  /// Get list of ready language codes
+  List<String> get readyLanguages {
+    final languages = <String>[];
+    if (arabicTranslation.isReady) languages.add('ar');
+    if (chineseTranslation.isReady) languages.add('zh');
+    if (englishTranslation.isReady) languages.add('en');
+    if (turkishTranslation.isReady) languages.add('tr');
+    return languages;
+  }
+
   /// Get readiness summary (Arabic)
   String get readinessSummaryAr {
-    if (isFullyReady) {
+    if (isFullyReady && allPacksReady) {
       return 'جاهز للاستخدام بدون إنترنت ✓';
     }
+    if (isFullyReady) {
+      final ready = <String>[];
+      if (chineseTranslation.isReady) ready.add('الصينية');
+      if (englishTranslation.isReady) ready.add('الإنجليزية');
+      if (turkishTranslation.isReady) ready.add('التركية');
+      return 'جاهز: ${ready.join('، ')}';
+    }
+
     final missing = <String>[];
     if (!whisperModel.isReady) missing.add('نموذج الكلام');
-    if (!chineseTranslation.isReady) missing.add('الترجمة الصينية');
-    if (!arabicTranslation.isReady) missing.add('الترجمة العربية');
-    if (!chineseTtsAvailable) missing.add('صوت صيني');
+    if (!arabicTranslation.isReady) missing.add('العربية');
+    if (!chineseTranslation.isReady &&
+        !englishTranslation.isReady &&
+        !turkishTranslation.isReady) {
+      missing.add('لغة واحدة على الأقل');
+    }
     if (!arabicTtsAvailable) missing.add('صوت عربي');
     return 'مطلوب: ${missing.join('، ')}';
+  }
+
+  /// Get language-specific readiness
+  String getLanguageReadiness(String languageCode) {
+    switch (languageCode) {
+      case 'ar':
+        return arabicTranslation.isReady ? 'جاهز ✓' : 'غير محمّل';
+      case 'zh':
+        return chineseTranslation.isReady ? 'جاهز ✓' : 'غير محمّل';
+      case 'en':
+        return englishTranslation.isReady ? 'جاهز ✓' : 'غير محمّل';
+      case 'tr':
+        return turkishTranslation.isReady ? 'جاهز ✓' : 'غير محمّل';
+      default:
+        return 'غير مدعوم';
+    }
   }
 }

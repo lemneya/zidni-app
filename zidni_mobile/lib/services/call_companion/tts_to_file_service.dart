@@ -1,6 +1,12 @@
 /// TTS to File Service for Call Companion Mode
 /// Generates audio files from text using system TTS
 ///
+/// Supported Languages:
+/// - Arabic (ar)
+/// - Chinese (zh)
+/// - English (en)
+/// - Turkish (tr)
+///
 /// This service uses platform channels to access native TTS-to-file capabilities:
 /// - Android: TextToSpeech.synthesizeToFile()
 /// - iOS: AVSpeechSynthesizer write to file
@@ -10,6 +16,8 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../models/call_companion/supported_language.dart';
+
 /// Result of TTS synthesis to file
 class TtsFileResult {
   /// Path to the generated audio file
@@ -18,8 +26,8 @@ class TtsFileResult {
   /// Duration of the audio in milliseconds
   final int durationMs;
 
-  /// Language code used
-  final String languageCode;
+  /// Language used
+  final SupportedLanguage language;
 
   /// Original text that was synthesized
   final String text;
@@ -27,9 +35,12 @@ class TtsFileResult {
   TtsFileResult({
     required this.filePath,
     required this.durationMs,
-    required this.languageCode,
+    required this.language,
     required this.text,
   });
+
+  /// Legacy getter for language code
+  String get languageCode => language.code;
 }
 
 /// Voice information
@@ -40,8 +51,8 @@ class TtsVoice {
   /// Display name
   final String name;
 
-  /// Language code
-  final String languageCode;
+  /// Language
+  final SupportedLanguage language;
 
   /// Whether this is the default voice for the language
   final bool isDefault;
@@ -49,9 +60,12 @@ class TtsVoice {
   TtsVoice({
     required this.id,
     required this.name,
-    required this.languageCode,
+    required this.language,
     this.isDefault = false,
   });
+
+  /// Legacy getter for language code
+  String get languageCode => language.code;
 }
 
 /// Service for generating audio files from text using TTS
@@ -69,29 +83,46 @@ class TtsToFileService {
   /// Platform channel for native TTS
   static const _channel = MethodChannel('com.zidni.app/tts_to_file');
 
-  /// Available Chinese voices
-  List<TtsVoice> _chineseVoices = [];
+  /// Available voices by language
+  final Map<SupportedLanguage, List<TtsVoice>> _voices = {
+    SupportedLanguage.arabic: [],
+    SupportedLanguage.chinese: [],
+    SupportedLanguage.english: [],
+    SupportedLanguage.turkish: [],
+  };
 
-  /// Available Arabic voices
-  List<TtsVoice> _arabicVoices = [];
+  /// TTS availability by language
+  final Map<SupportedLanguage, bool> _ttsAvailable = {
+    SupportedLanguage.arabic: false,
+    SupportedLanguage.chinese: false,
+    SupportedLanguage.english: false,
+    SupportedLanguage.turkish: false,
+  };
 
-  /// Whether Chinese TTS is available
-  bool _chineseTtsAvailable = false;
-
-  /// Whether Arabic TTS is available
-  bool _arabicTtsAvailable = false;
-
-  /// Check if Chinese TTS is available
-  bool get isChineseTtsAvailable => _chineseTtsAvailable;
+  /// Check if TTS is available for a language
+  bool isTtsAvailable(SupportedLanguage language) => _ttsAvailable[language] ?? false;
 
   /// Check if Arabic TTS is available
-  bool get isArabicTtsAvailable => _arabicTtsAvailable;
+  bool get isArabicTtsAvailable => _ttsAvailable[SupportedLanguage.arabic] ?? false;
 
-  /// Get available Chinese voices
-  List<TtsVoice> get chineseVoices => List.unmodifiable(_chineseVoices);
+  /// Check if Chinese TTS is available
+  bool get isChineseTtsAvailable => _ttsAvailable[SupportedLanguage.chinese] ?? false;
 
-  /// Get available Arabic voices
-  List<TtsVoice> get arabicVoices => List.unmodifiable(_arabicVoices);
+  /// Check if English TTS is available
+  bool get isEnglishTtsAvailable => _ttsAvailable[SupportedLanguage.english] ?? false;
+
+  /// Check if Turkish TTS is available
+  bool get isTurkishTtsAvailable => _ttsAvailable[SupportedLanguage.turkish] ?? false;
+
+  /// Get available voices for a language
+  List<TtsVoice> getVoices(SupportedLanguage language) => 
+      List.unmodifiable(_voices[language] ?? []);
+
+  /// Legacy getters
+  List<TtsVoice> get arabicVoices => getVoices(SupportedLanguage.arabic);
+  List<TtsVoice> get chineseVoices => getVoices(SupportedLanguage.chinese);
+  List<TtsVoice> get englishVoices => getVoices(SupportedLanguage.english);
+  List<TtsVoice> get turkishVoices => getVoices(SupportedLanguage.turkish);
 
   /// Initialize the service and check available voices
   Future<void> initialize() async {
@@ -100,69 +131,67 @@ class TtsToFileService {
       final result = await _channel.invokeMethod<Map>('getAvailableVoices');
 
       if (result != null) {
-        // Parse Chinese voices
-        final chineseList = result['chinese'] as List? ?? [];
-        _chineseVoices = chineseList.map((v) => TtsVoice(
-              id: v['id'] as String,
-              name: v['name'] as String,
-              languageCode: 'zh',
-              isDefault: v['isDefault'] as bool? ?? false,
-            )).toList();
-        _chineseTtsAvailable = _chineseVoices.isNotEmpty;
-
-        // Parse Arabic voices
-        final arabicList = result['arabic'] as List? ?? [];
-        _arabicVoices = arabicList.map((v) => TtsVoice(
-              id: v['id'] as String,
-              name: v['name'] as String,
-              languageCode: 'ar',
-              isDefault: v['isDefault'] as bool? ?? false,
-            )).toList();
-        _arabicTtsAvailable = _arabicVoices.isNotEmpty;
+        // Parse voices for each language
+        _parseVoices(result, 'arabic', SupportedLanguage.arabic);
+        _parseVoices(result, 'chinese', SupportedLanguage.chinese);
+        _parseVoices(result, 'english', SupportedLanguage.english);
+        _parseVoices(result, 'turkish', SupportedLanguage.turkish);
       }
     } on PlatformException catch (e) {
       // Platform channel not available, use fallback
       print('TTS platform channel error: ${e.message}');
-      _chineseTtsAvailable = false;
-      _arabicTtsAvailable = false;
+      _setAllUnavailable();
     } catch (e) {
       print('TTS initialization error: $e');
-      _chineseTtsAvailable = false;
-      _arabicTtsAvailable = false;
+      _setAllUnavailable();
+    }
+  }
+
+  void _parseVoices(Map result, String key, SupportedLanguage language) {
+    final voiceList = result[key] as List? ?? [];
+    _voices[language] = voiceList.map((v) => TtsVoice(
+          id: v['id'] as String,
+          name: v['name'] as String,
+          language: language,
+          isDefault: v['isDefault'] as bool? ?? false,
+        )).toList();
+    _ttsAvailable[language] = _voices[language]!.isNotEmpty;
+  }
+
+  void _setAllUnavailable() {
+    for (final language in SupportedLanguage.values) {
+      _ttsAvailable[language] = false;
     }
   }
 
   /// Synthesize text to an audio file
   ///
   /// [text] - Text to synthesize
-  /// [languageCode] - Language code ('zh' or 'ar')
+  /// [language] - Target language
   /// [voiceId] - Optional specific voice ID to use
   /// [outputFormat] - Output format ('m4a', 'wav', 'mp3')
   Future<TtsFileResult> synthesizeToFile({
     required String text,
-    required String languageCode,
+    required SupportedLanguage language,
     String? voiceId,
     String outputFormat = 'm4a',
   }) async {
-    // Validate language
-    if (languageCode == 'zh' && !_chineseTtsAvailable) {
-      throw Exception('Chinese TTS not available. Please install Chinese voice in system settings.');
-    }
-    if (languageCode == 'ar' && !_arabicTtsAvailable) {
-      throw Exception('Arabic TTS not available. Please install Arabic voice in system settings.');
+    // Validate language availability
+    if (!isTtsAvailable(language)) {
+      throw Exception('${language.nameAr} TTS not available. Please install voice in system settings.');
     }
 
     try {
       // Generate output file path
       final directory = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filename = 'tts_${languageCode}_$timestamp.$outputFormat';
+      final filename = 'tts_${language.code}_$timestamp.$outputFormat';
       final outputPath = '${directory.path}/$filename';
 
       // Call platform channel to synthesize
       final result = await _channel.invokeMethod<Map>('synthesizeToFile', {
         'text': text,
-        'languageCode': languageCode,
+        'languageCode': language.code,
         'voiceId': voiceId,
         'outputPath': outputPath,
         'outputFormat': outputFormat,
@@ -175,7 +204,7 @@ class TtsToFileService {
       return TtsFileResult(
         filePath: result['filePath'] as String,
         durationMs: result['durationMs'] as int? ?? 0,
-        languageCode: languageCode,
+        language: language,
         text: text,
       );
     } on PlatformException catch (e) {
@@ -183,26 +212,36 @@ class TtsToFileService {
     }
   }
 
-  /// Synthesize Chinese text to file
-  Future<TtsFileResult> synthesizeChineseToFile(String text) async {
-    return synthesizeToFile(text: text, languageCode: 'zh');
-  }
-
   /// Synthesize Arabic text to file
   Future<TtsFileResult> synthesizeArabicToFile(String text) async {
-    return synthesizeToFile(text: text, languageCode: 'ar');
+    return synthesizeToFile(text: text, language: SupportedLanguage.arabic);
+  }
+
+  /// Synthesize Chinese text to file
+  Future<TtsFileResult> synthesizeChineseToFile(String text) async {
+    return synthesizeToFile(text: text, language: SupportedLanguage.chinese);
+  }
+
+  /// Synthesize English text to file
+  Future<TtsFileResult> synthesizeEnglishToFile(String text) async {
+    return synthesizeToFile(text: text, language: SupportedLanguage.english);
+  }
+
+  /// Synthesize Turkish text to file
+  Future<TtsFileResult> synthesizeTurkishToFile(String text) async {
+    return synthesizeToFile(text: text, language: SupportedLanguage.turkish);
   }
 
   /// Speak text immediately (not to file)
   Future<void> speak({
     required String text,
-    required String languageCode,
+    required SupportedLanguage language,
     String? voiceId,
   }) async {
     try {
       await _channel.invokeMethod('speak', {
         'text': text,
-        'languageCode': languageCode,
+        'languageCode': language.code,
         'voiceId': voiceId,
       });
     } on PlatformException catch (e) {
@@ -221,29 +260,25 @@ class TtsToFileService {
 
   /// Get instructions for installing missing TTS voices
   String getVoiceInstallInstructions(String languageCode) {
+    final language = SupportedLanguageExtension.fromCode(languageCode);
+    
     if (Platform.isAndroid) {
-      return languageCode == 'zh'
-          ? 'لتثبيت الصوت الصيني:\n'
-              '1. افتح إعدادات الهاتف\n'
-              '2. اذهب إلى النظام > اللغات والإدخال > تحويل النص إلى كلام\n'
-              '3. اختر محرك Google TTS\n'
-              '4. قم بتنزيل اللغة الصينية'
-          : 'لتثبيت الصوت العربي:\n'
-              '1. افتح إعدادات الهاتف\n'
-              '2. اذهب إلى النظام > اللغات والإدخال > تحويل النص إلى كلام\n'
-              '3. اختر محرك Google TTS\n'
-              '4. قم بتنزيل اللغة العربية';
+      return 'لتثبيت صوت ${language.nameAr}:\n'
+          '1. افتح إعدادات الهاتف\n'
+          '2. اذهب إلى النظام > اللغات والإدخال > تحويل النص إلى كلام\n'
+          '3. اختر محرك Google TTS\n'
+          '4. قم بتنزيل ${language.nameAr}';
     } else if (Platform.isIOS) {
-      return languageCode == 'zh'
-          ? 'لتثبيت الصوت الصيني:\n'
-              '1. افتح الإعدادات\n'
-              '2. اذهب إلى تسهيلات الاستخدام > المحتوى المنطوق > الأصوات\n'
-              '3. اختر الصينية وقم بتنزيل صوت'
-          : 'لتثبيت الصوت العربي:\n'
-              '1. افتح الإعدادات\n'
-              '2. اذهب إلى تسهيلات الاستخدام > المحتوى المنطوق > الأصوات\n'
-              '3. اختر العربية وقم بتنزيل صوت';
+      return 'لتثبيت صوت ${language.nameAr}:\n'
+          '1. افتح الإعدادات\n'
+          '2. اذهب إلى تسهيلات الاستخدام > المحتوى المنطوق > الأصوات\n'
+          '3. اختر ${language.nameAr} وقم بتنزيل صوت';
     }
     return 'يرجى تثبيت الصوت من إعدادات النظام';
+  }
+
+  /// Get instructions for a specific language
+  String getVoiceInstallInstructionsForLanguage(SupportedLanguage language) {
+    return getVoiceInstallInstructions(language.code);
   }
 }

@@ -2,20 +2,23 @@
 /// Main UI for real-time phone call translation
 ///
 /// Features:
-/// - LISTEN button: Capture Chinese → Show Arabic translation
-/// - SPEAK button: Capture Arabic → Speak Chinese translation
+/// - LISTEN button: Capture source language → Show Arabic translation
+/// - SPEAK button: Capture Arabic → Speak source language translation
+/// - Language selector: Chinese, English, Turkish
 /// - Speakerphone hint and instructions
 /// - Translation history display
 
 import 'package:flutter/material.dart';
 
 import '../../models/call_companion/audio_chunk.dart';
+import '../../models/call_companion/supported_language.dart';
 import '../../services/call_companion/audio_pipeline_service.dart';
 import '../../services/call_companion/offline_pack_manager.dart';
 import '../../widgets/call_companion/listen_button.dart';
 import '../../widgets/call_companion/speak_button.dart';
 import '../../widgets/call_companion/translation_display.dart';
 import '../../widgets/call_companion/how_to_use_sheet.dart';
+import '../../widgets/call_companion/language_selector.dart';
 import 'offline_pack_screen.dart';
 
 /// Main screen for Call Companion Mode
@@ -42,6 +45,12 @@ class _CallCompanionScreenState extends State<CallCompanionScreen> {
   /// Whether offline packs are ready
   bool _isOfflineReady = false;
 
+  /// Currently selected language pair
+  LanguagePair _selectedPair = LanguagePair.chineseArabic;
+
+  /// Available language pairs (with downloaded models)
+  List<LanguagePair> _availablePairs = [];
+
   @override
   void initState() {
     super.initState();
@@ -53,10 +62,17 @@ class _CallCompanionScreenState extends State<CallCompanionScreen> {
     final status = await _packManager.initialize();
     setState(() {
       _isOfflineReady = status.isFullyReady;
+      _availablePairs = _packManager.getAvailableLanguagePairs();
+      
+      // If current pair is not available, switch to first available
+      if (_availablePairs.isNotEmpty && !_availablePairs.contains(_selectedPair)) {
+        _selectedPair = _availablePairs.first;
+      }
     });
 
-    // Initialize pipeline
+    // Initialize pipeline with selected language pair
     await _pipelineService.initialize();
+    _pipelineService.setLanguagePair(_selectedPair);
 
     // Set up callbacks
     _pipelineService.onStateChanged = (state) {
@@ -72,7 +88,8 @@ class _CallCompanionScreenState extends State<CallCompanionScreen> {
           TranslationEntry(
             sourceText: result.transcribedText,
             translatedText: result.translatedText,
-            isChineseSource: result.chunk.isChinese,
+            sourceLanguage: result.sourceLanguage,
+            targetLanguage: result.targetLanguage,
             timestamp: DateTime.now(),
           ),
         );
@@ -93,6 +110,14 @@ class _CallCompanionScreenState extends State<CallCompanionScreen> {
   void dispose() {
     _pipelineService.dispose();
     super.dispose();
+  }
+
+  /// Handle language pair change
+  void _onLanguageChanged(LanguagePair pair) {
+    setState(() {
+      _selectedPair = pair;
+    });
+    _pipelineService.setLanguagePair(pair);
   }
 
   /// Handle LISTEN button press
@@ -147,6 +172,7 @@ class _CallCompanionScreenState extends State<CallCompanionScreen> {
       final status = await _packManager.initialize();
       setState(() {
         _isOfflineReady = status.isFullyReady;
+        _availablePairs = _packManager.getAvailableLanguagePairs();
       });
     });
   }
@@ -189,6 +215,9 @@ class _CallCompanionScreenState extends State<CallCompanionScreen> {
         ),
         body: Column(
           children: [
+            // Language selector
+            _buildLanguageSelector(),
+
             // Speakerphone hint
             _buildSpeakerphoneHint(),
 
@@ -210,6 +239,22 @@ class _CallCompanionScreenState extends State<CallCompanionScreen> {
             const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          LanguageSelector(
+            selectedPair: _selectedPair,
+            availablePairs: _availablePairs,
+            onChanged: _onLanguageChanged,
+          ),
+        ],
       ),
     );
   }
@@ -300,23 +345,41 @@ class _CallCompanionScreenState extends State<CallCompanionScreen> {
     final isProcessing = _pipelineState != PipelineState.idle &&
         _pipelineState != PipelineState.recording;
 
+    // Dynamic labels based on selected language
+    final listenLabel = '${_selectedPair.source.nameAr} ← عربي';
+    final speakLabel = 'عربي ← ${_selectedPair.source.nameAr}';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Column(
         children: [
-          // LISTEN button (Chinese → Arabic)
-          ListenButton(
-            isActive: isRecordingListen,
-            isDisabled: isProcessing || isRecordingSpeak,
-            onPressed: _onListenPressed,
+          // Language indicator
+          Text(
+            '${_selectedPair.source.flag} ${_selectedPair.source.nameAr} ↔ ${_selectedPair.target.flag} ${_selectedPair.target.nameAr}',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.5),
+              fontSize: 12,
+            ),
           ),
+          const SizedBox(height: 16),
+          
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              // LISTEN button (Source → Arabic)
+              ListenButton(
+                isActive: isRecordingListen,
+                isDisabled: isProcessing || isRecordingSpeak,
+                onPressed: _onListenPressed,
+              ),
 
-          // SPEAK button (Arabic → Chinese)
-          SpeakButton(
-            isActive: isRecordingSpeak,
-            isDisabled: isProcessing || isRecordingListen,
-            onPressed: _onSpeakPressed,
+              // SPEAK button (Arabic → Source)
+              SpeakButton(
+                isActive: isRecordingSpeak,
+                isDisabled: isProcessing || isRecordingListen,
+                onPressed: _onSpeakPressed,
+              ),
+            ],
           ),
         ],
       ),
@@ -328,13 +391,18 @@ class _CallCompanionScreenState extends State<CallCompanionScreen> {
 class TranslationEntry {
   final String sourceText;
   final String translatedText;
-  final bool isChineseSource;
+  final SupportedLanguage sourceLanguage;
+  final SupportedLanguage targetLanguage;
   final DateTime timestamp;
 
   TranslationEntry({
     required this.sourceText,
     required this.translatedText,
-    required this.isChineseSource,
+    required this.sourceLanguage,
+    required this.targetLanguage,
     required this.timestamp,
   });
+
+  /// Whether the source is not Arabic (for display purposes)
+  bool get isChineseSource => sourceLanguage != SupportedLanguage.arabic;
 }
