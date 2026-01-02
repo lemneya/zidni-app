@@ -6,6 +6,8 @@
 /// - Chinese (zh)
 /// - English (en)
 /// - Turkish (tr)
+/// - Spanish (es)
+/// - French (fr)
 ///
 /// This service uses platform channels to access native TTS-to-file capabilities:
 /// - Android: TextToSpeech.synthesizeToFile()
@@ -89,6 +91,8 @@ class TtsToFileService {
     SupportedLanguage.chinese: [],
     SupportedLanguage.english: [],
     SupportedLanguage.turkish: [],
+    SupportedLanguage.spanish: [],
+    SupportedLanguage.french: [],
   };
 
   /// TTS availability by language
@@ -97,6 +101,8 @@ class TtsToFileService {
     SupportedLanguage.chinese: false,
     SupportedLanguage.english: false,
     SupportedLanguage.turkish: false,
+    SupportedLanguage.spanish: false,
+    SupportedLanguage.french: false,
   };
 
   /// Check if TTS is available for a language
@@ -114,6 +120,12 @@ class TtsToFileService {
   /// Check if Turkish TTS is available
   bool get isTurkishTtsAvailable => _ttsAvailable[SupportedLanguage.turkish] ?? false;
 
+  /// Check if Spanish TTS is available
+  bool get isSpanishTtsAvailable => _ttsAvailable[SupportedLanguage.spanish] ?? false;
+
+  /// Check if French TTS is available
+  bool get isFrenchTtsAvailable => _ttsAvailable[SupportedLanguage.french] ?? false;
+
   /// Get available voices for a language
   List<TtsVoice> getVoices(SupportedLanguage language) => 
       List.unmodifiable(_voices[language] ?? []);
@@ -123,6 +135,8 @@ class TtsToFileService {
   List<TtsVoice> get chineseVoices => getVoices(SupportedLanguage.chinese);
   List<TtsVoice> get englishVoices => getVoices(SupportedLanguage.english);
   List<TtsVoice> get turkishVoices => getVoices(SupportedLanguage.turkish);
+  List<TtsVoice> get spanishVoices => getVoices(SupportedLanguage.spanish);
+  List<TtsVoice> get frenchVoices => getVoices(SupportedLanguage.french);
 
   /// Initialize the service and check available voices
   Future<void> initialize() async {
@@ -136,6 +150,8 @@ class TtsToFileService {
         _parseVoices(result, 'chinese', SupportedLanguage.chinese);
         _parseVoices(result, 'english', SupportedLanguage.english);
         _parseVoices(result, 'turkish', SupportedLanguage.turkish);
+        _parseVoices(result, 'spanish', SupportedLanguage.spanish);
+        _parseVoices(result, 'french', SupportedLanguage.french);
       }
     } on PlatformException catch (e) {
       // Platform channel not available, use fallback
@@ -230,6 +246,16 @@ class TtsToFileService {
   /// Synthesize Turkish text to file
   Future<TtsFileResult> synthesizeTurkishToFile(String text) async {
     return synthesizeToFile(text: text, language: SupportedLanguage.turkish);
+  }
+
+  /// Synthesize Spanish text to file
+  Future<TtsFileResult> synthesizeSpanishToFile(String text) async {
+    return synthesizeToFile(text: text, language: SupportedLanguage.spanish);
+  }
+
+  /// Synthesize French text to file
+  Future<TtsFileResult> synthesizeFrenchToFile(String text) async {
+    return synthesizeToFile(text: text, language: SupportedLanguage.french);
   }
 
   /// Speak text immediately (not to file)

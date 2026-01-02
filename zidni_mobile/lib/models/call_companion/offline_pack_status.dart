@@ -6,6 +6,8 @@
 /// - Chinese (for Canton Fair / China)
 /// - English (for USA / International)
 /// - Turkish (for Turkey)
+/// - Spanish (for Spain / Latin America)
+/// - French (for France / North Africa)
 
 enum PackDownloadStatus {
   /// Not downloaded yet
@@ -99,6 +101,12 @@ class OfflinePackStatus {
   /// ML Kit Turkish language model
   final PackStatus turkishTranslation;
 
+  /// ML Kit Spanish language model
+  final PackStatus spanishTranslation;
+
+  /// ML Kit French language model
+  final PackStatus frenchTranslation;
+
   /// System TTS Arabic voice availability
   bool arabicTtsAvailable;
 
@@ -111,16 +119,26 @@ class OfflinePackStatus {
   /// System TTS Turkish voice availability
   bool turkishTtsAvailable;
 
+  /// System TTS Spanish voice availability
+  bool spanishTtsAvailable;
+
+  /// System TTS French voice availability
+  bool frenchTtsAvailable;
+
   OfflinePackStatus({
     required this.whisperModel,
     required this.arabicTranslation,
     required this.chineseTranslation,
     required this.englishTranslation,
     required this.turkishTranslation,
+    required this.spanishTranslation,
+    required this.frenchTranslation,
     this.arabicTtsAvailable = false,
     this.chineseTtsAvailable = false,
     this.englishTtsAvailable = false,
     this.turkishTtsAvailable = false,
+    this.spanishTtsAvailable = false,
+    this.frenchTtsAvailable = false,
   });
 
   /// Create default status with all packs not downloaded
@@ -161,6 +179,20 @@ class OfflinePackStatus {
         descriptionAr: 'نموذج الترجمة من وإلى التركية',
         sizeBytes: 28 * 1024 * 1024, // ~28 MB
       ),
+      spanishTranslation: PackStatus(
+        id: 'mlkit_es',
+        nameAr: 'نموذج الترجمة الإسبانية',
+        nameEn: 'Spanish Translation Model',
+        descriptionAr: 'نموذج الترجمة من وإلى الإسبانية',
+        sizeBytes: 26 * 1024 * 1024, // ~26 MB
+      ),
+      frenchTranslation: PackStatus(
+        id: 'mlkit_fr',
+        nameAr: 'نموذج الترجمة الفرنسية',
+        nameEn: 'French Translation Model',
+        descriptionAr: 'نموذج الترجمة من وإلى الفرنسية',
+        sizeBytes: 27 * 1024 * 1024, // ~27 MB
+      ),
     );
   }
 
@@ -171,6 +203,8 @@ class OfflinePackStatus {
         chineseTranslation,
         englishTranslation,
         turkishTranslation,
+        spanishTranslation,
+        frenchTranslation,
       ];
 
   /// Get translation packs only
@@ -179,6 +213,8 @@ class OfflinePackStatus {
         chineseTranslation,
         englishTranslation,
         turkishTranslation,
+        spanishTranslation,
+        frenchTranslation,
       ];
 
   /// Check if core packs are ready (Whisper + Arabic)
@@ -190,7 +226,9 @@ class OfflinePackStatus {
       arabicTranslation.isReady &&
       (chineseTranslation.isReady ||
           englishTranslation.isReady ||
-          turkishTranslation.isReady);
+          turkishTranslation.isReady ||
+          spanishTranslation.isReady ||
+          frenchTranslation.isReady);
 
   /// Check if all packs are ready
   bool get allPacksReady =>
@@ -198,7 +236,9 @@ class OfflinePackStatus {
       arabicTranslation.isReady &&
       chineseTranslation.isReady &&
       englishTranslation.isReady &&
-      turkishTranslation.isReady;
+      turkishTranslation.isReady &&
+      spanishTranslation.isReady &&
+      frenchTranslation.isReady;
 
   /// Check if TTS is ready for core languages
   bool get coreTtsReady => arabicTtsAvailable;
@@ -213,7 +253,9 @@ class OfflinePackStatus {
       arabicTranslation.sizeBytes +
       chineseTranslation.sizeBytes +
       englishTranslation.sizeBytes +
-      turkishTranslation.sizeBytes;
+      turkishTranslation.sizeBytes +
+      spanishTranslation.sizeBytes +
+      frenchTranslation.sizeBytes;
 
   /// Get total size display
   String get totalSizeDisplay {
@@ -234,6 +276,8 @@ class OfflinePackStatus {
     if (chineseTranslation.isReady) languages.add('zh');
     if (englishTranslation.isReady) languages.add('en');
     if (turkishTranslation.isReady) languages.add('tr');
+    if (spanishTranslation.isReady) languages.add('es');
+    if (frenchTranslation.isReady) languages.add('fr');
     return languages;
   }
 
@@ -247,6 +291,8 @@ class OfflinePackStatus {
       if (chineseTranslation.isReady) ready.add('الصينية');
       if (englishTranslation.isReady) ready.add('الإنجليزية');
       if (turkishTranslation.isReady) ready.add('التركية');
+      if (spanishTranslation.isReady) ready.add('الإسبانية');
+      if (frenchTranslation.isReady) ready.add('الفرنسية');
       return 'جاهز: ${ready.join('، ')}';
     }
 
@@ -255,7 +301,9 @@ class OfflinePackStatus {
     if (!arabicTranslation.isReady) missing.add('العربية');
     if (!chineseTranslation.isReady &&
         !englishTranslation.isReady &&
-        !turkishTranslation.isReady) {
+        !turkishTranslation.isReady &&
+        !spanishTranslation.isReady &&
+        !frenchTranslation.isReady) {
       missing.add('لغة واحدة على الأقل');
     }
     if (!arabicTtsAvailable) missing.add('صوت عربي');
@@ -273,6 +321,10 @@ class OfflinePackStatus {
         return englishTranslation.isReady ? 'جاهز ✓' : 'غير محمّل';
       case 'tr':
         return turkishTranslation.isReady ? 'جاهز ✓' : 'غير محمّل';
+      case 'es':
+        return spanishTranslation.isReady ? 'جاهز ✓' : 'غير محمّل';
+      case 'fr':
+        return frenchTranslation.isReady ? 'جاهز ✓' : 'غير محمّل';
       default:
         return 'غير مدعوم';
     }

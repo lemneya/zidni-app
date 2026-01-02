@@ -6,6 +6,8 @@
 /// - Chinese (zh) - For Canton Fair / China
 /// - English (en) - For USA / International
 /// - Turkish (tr) - For Turkey / Turkish speakers
+/// - Spanish (es) - For Spain / Latin America
+/// - French (fr) - For France / North Africa
 ///
 /// Note: This service wraps google_mlkit_translation for offline translation.
 /// Language models must be downloaded before use.
@@ -80,6 +82,8 @@ class MlkitTranslationService {
     SupportedLanguage.chinese: false,
     SupportedLanguage.english: false,
     SupportedLanguage.turkish: false,
+    SupportedLanguage.spanish: false,
+    SupportedLanguage.french: false,
   };
 
   /// Check if a specific language model is ready
@@ -96,6 +100,12 @@ class MlkitTranslationService {
 
   /// Check if Turkish model is ready
   bool get isTurkishModelReady => _modelStatus[SupportedLanguage.turkish] ?? false;
+
+  /// Check if Spanish model is ready
+  bool get isSpanishModelReady => _modelStatus[SupportedLanguage.spanish] ?? false;
+
+  /// Check if French model is ready
+  bool get isFrenchModelReady => _modelStatus[SupportedLanguage.french] ?? false;
 
   /// Check if a language pair is ready for translation
   bool isPairReady(LanguagePair pair) {
@@ -284,6 +294,46 @@ class MlkitTranslationService {
     return result.translatedText;
   }
 
+  /// Translate Spanish to Arabic
+  Future<String> translateSpanishToArabic(String text) async {
+    final result = await translate(
+      text: text,
+      source: SupportedLanguage.spanish,
+      target: SupportedLanguage.arabic,
+    );
+    return result.translatedText;
+  }
+
+  /// Translate Arabic to Spanish
+  Future<String> translateArabicToSpanish(String text) async {
+    final result = await translate(
+      text: text,
+      source: SupportedLanguage.arabic,
+      target: SupportedLanguage.spanish,
+    );
+    return result.translatedText;
+  }
+
+  /// Translate French to Arabic
+  Future<String> translateFrenchToArabic(String text) async {
+    final result = await translate(
+      text: text,
+      source: SupportedLanguage.french,
+      target: SupportedLanguage.arabic,
+    );
+    return result.translatedText;
+  }
+
+  /// Translate Arabic to French
+  Future<String> translateArabicToFrench(String text) async {
+    final result = await translate(
+      text: text,
+      source: SupportedLanguage.arabic,
+      target: SupportedLanguage.french,
+    );
+    return result.translatedText;
+  }
+
   /// Get model status for all languages
   Future<List<ModelDownloadStatus>> getModelStatuses() async {
     return SupportedLanguage.values.map((language) {
@@ -306,6 +356,10 @@ class MlkitTranslationService {
         return 25;
       case SupportedLanguage.turkish:
         return 28;
+      case SupportedLanguage.spanish:
+        return 26;
+      case SupportedLanguage.french:
+        return 27;
     }
   }
 

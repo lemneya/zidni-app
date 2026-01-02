@@ -1,5 +1,13 @@
 /// Supported Language Model for Call Companion Mode
 /// Defines the languages available for translation
+///
+/// Supported Languages:
+/// - Arabic (ar) - User's language
+/// - Chinese (zh) - Canton Fair, China
+/// - English (en) - USA, International
+/// - Turkish (tr) - Turkey
+/// - Spanish (es) - Spain, Latin America
+/// - French (fr) - France, North Africa
 
 import 'package:flutter/material.dart';
 
@@ -9,6 +17,8 @@ enum SupportedLanguage {
   chinese,
   english,
   turkish,
+  spanish,
+  french,
 }
 
 /// Extension methods for SupportedLanguage
@@ -24,6 +34,10 @@ extension SupportedLanguageExtension on SupportedLanguage {
         return 'en';
       case SupportedLanguage.turkish:
         return 'tr';
+      case SupportedLanguage.spanish:
+        return 'es';
+      case SupportedLanguage.french:
+        return 'fr';
     }
   }
 
@@ -38,6 +52,10 @@ extension SupportedLanguageExtension on SupportedLanguage {
         return 'en-US';
       case SupportedLanguage.turkish:
         return 'tr-TR';
+      case SupportedLanguage.spanish:
+        return 'es-ES';
+      case SupportedLanguage.french:
+        return 'fr-FR';
     }
   }
 
@@ -52,6 +70,10 @@ extension SupportedLanguageExtension on SupportedLanguage {
         return 'الإنجليزية';
       case SupportedLanguage.turkish:
         return 'التركية';
+      case SupportedLanguage.spanish:
+        return 'الإسبانية';
+      case SupportedLanguage.french:
+        return 'الفرنسية';
     }
   }
 
@@ -66,6 +88,10 @@ extension SupportedLanguageExtension on SupportedLanguage {
         return 'English';
       case SupportedLanguage.turkish:
         return 'Türkçe';
+      case SupportedLanguage.spanish:
+        return 'Español';
+      case SupportedLanguage.french:
+        return 'Français';
     }
   }
 
@@ -80,6 +106,10 @@ extension SupportedLanguageExtension on SupportedLanguage {
         return '🇺🇸';
       case SupportedLanguage.turkish:
         return '🇹🇷';
+      case SupportedLanguage.spanish:
+        return '🇪🇸';
+      case SupportedLanguage.french:
+        return '🇫🇷';
     }
   }
 
@@ -91,6 +121,8 @@ extension SupportedLanguageExtension on SupportedLanguage {
       case SupportedLanguage.chinese:
       case SupportedLanguage.english:
       case SupportedLanguage.turkish:
+      case SupportedLanguage.spanish:
+      case SupportedLanguage.french:
         return TextDirection.ltr;
     }
   }
@@ -106,6 +138,10 @@ extension SupportedLanguageExtension on SupportedLanguage {
         return Colors.indigo;
       case SupportedLanguage.turkish:
         return Colors.red.shade700;
+      case SupportedLanguage.spanish:
+        return Colors.orange;
+      case SupportedLanguage.french:
+        return Colors.blue.shade700;
     }
   }
 
@@ -120,6 +156,10 @@ extension SupportedLanguageExtension on SupportedLanguage {
         return 'en';
       case SupportedLanguage.turkish:
         return 'tr';
+      case SupportedLanguage.spanish:
+        return 'es';
+      case SupportedLanguage.french:
+        return 'fr';
     }
   }
 
@@ -137,10 +177,23 @@ extension SupportedLanguageExtension on SupportedLanguage {
         return SupportedLanguage.english;
       case 'tr':
         return SupportedLanguage.turkish;
+      case 'es':
+        return SupportedLanguage.spanish;
+      case 'fr':
+        return SupportedLanguage.french;
       default:
         return SupportedLanguage.english;
     }
   }
+
+  /// Get all foreign languages (non-Arabic)
+  static List<SupportedLanguage> get foreignLanguages => [
+        SupportedLanguage.chinese,
+        SupportedLanguage.english,
+        SupportedLanguage.turkish,
+        SupportedLanguage.spanish,
+        SupportedLanguage.french,
+      ];
 }
 
 /// Model for a language pair (source → target)
@@ -178,12 +231,32 @@ class LanguagePair {
     target: SupportedLanguage.arabic,
   );
 
+  static const spanishArabic = LanguagePair(
+    source: SupportedLanguage.spanish,
+    target: SupportedLanguage.arabic,
+  );
+
+  static const frenchArabic = LanguagePair(
+    source: SupportedLanguage.french,
+    target: SupportedLanguage.arabic,
+  );
+
   /// All available pairs
   static const List<LanguagePair> allPairs = [
     chineseArabic,
     englishArabic,
     turkishArabic,
+    spanishArabic,
+    frenchArabic,
   ];
+
+  /// Get pair for a foreign language (paired with Arabic)
+  static LanguagePair forLanguage(SupportedLanguage language) {
+    return LanguagePair(
+      source: language,
+      target: SupportedLanguage.arabic,
+    );
+  }
 
   /// Display string for the pair
   String get displayAr => '${source.nameAr} ↔ ${target.nameAr}';
