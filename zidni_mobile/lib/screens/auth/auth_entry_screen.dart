@@ -94,10 +94,23 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> {
     });
   }
 
+  /// Validates phone number format
+  bool _isValidPhone(String phone) {
+    // Accept international format: +XX XXXXXXXXX (8-15 digits after country code)
+    final phoneRegex = RegExp(r'^\+?[0-9]{8,15}$');
+    final cleanPhone = phone.replaceAll(RegExp(r'[\s\-()]'), '');
+    return phoneRegex.hasMatch(cleanPhone);
+  }
+
   Future<void> _verifyPhone() async {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) {
       _showError('الرجاء إدخال رقم الهاتف'); // Please enter phone number
+      return;
+    }
+
+    if (!_isValidPhone(phone)) {
+      _showError('رقم الهاتف غير صالح. يجب أن يبدأ بـ + ورمز الدولة'); // Invalid phone number. Must start with + and country code
       return;
     }
 
@@ -466,6 +479,8 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> {
           textDirection: TextDirection.ltr,
           decoration: InputDecoration(
             labelText: 'كلمة المرور',
+            hintText: _isCreatingAccount ? '٨ أحرف على الأقل' : null,
+            helperText: _isCreatingAccount ? 'يجب أن تحتوي على ٨ أحرف على الأقل' : null,
             prefixIcon: const Icon(Icons.lock),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
