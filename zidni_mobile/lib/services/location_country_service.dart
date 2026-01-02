@@ -21,6 +21,15 @@ class LocationCountryService {
     'CO': TargetLang.es, // Colombia
     'PE': TargetLang.es, // Peru
     'CL': TargetLang.es, // Chile
+    'FR': TargetLang.fr, // France
+    'MA': TargetLang.fr, // Morocco
+    'DZ': TargetLang.fr, // Algeria
+    'TN': TargetLang.fr, // Tunisia
+    'SN': TargetLang.fr, // Senegal
+    'CI': TargetLang.fr, // Ivory Coast
+    'BE': TargetLang.fr, // Belgium
+    'CH': TargetLang.fr, // Switzerland (French-speaking)
+    'CA': TargetLang.fr, // Canada (Quebec)
   };
   
   /// Country code to Arabic display name
@@ -39,6 +48,15 @@ class LocationCountryService {
     'GB': 'المملكة المتحدة',
     'AE': 'الإمارات',
     'SA': 'السعودية',
+    'FR': 'فرنسا',
+    'MA': 'المغرب',
+    'DZ': 'الجزائر',
+    'TN': 'تونس',
+    'SN': 'السنغال',
+    'CI': 'ساحل العاج',
+    'BE': 'بلجيكا',
+    'CH': 'سويسرا',
+    'CA': 'كندا',
   };
   
   /// Check if location permission is granted

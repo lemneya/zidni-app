@@ -5,8 +5,8 @@ abstract class TranslationService {
   /// Translate text from source language to target language
   /// 
   /// [text] - The text to translate
-  /// [fromLang] - Source language code: "ar", "zh", "en", "tr", "es"
-  /// [toLang] - Target language code: "ar", "zh", "en", "tr", "es"
+  /// [fromLang] - Source language code: "ar", "zh", "en", "tr", "es", "fr"
+  /// [toLang] - Target language code: "ar", "zh", "en", "tr", "es", "fr"
   /// 
   /// Returns the translated text
   Future<String> translate({
@@ -28,6 +28,7 @@ class StubTranslationService implements TranslationService {
     'en': '(English)',
     'tr': '(Türkçe)',
     'es': '(Español)',
+    'fr': '(Français)',
   };
   
   @override

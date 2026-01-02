@@ -12,7 +12,7 @@ import 'package:zidni_mobile/widgets/quick_phrases_bar.dart';
 enum TurnLang { ar, target }
 
 /// Target language options
-enum TargetLang { zh, en, tr, es }
+enum TargetLang { zh, en, tr, es, fr }
 
 /// Extension for TargetLang to get display info
 extension TargetLangExtension on TargetLang {
@@ -22,6 +22,7 @@ extension TargetLangExtension on TargetLang {
       case TargetLang.en: return 'en';
       case TargetLang.tr: return 'tr';
       case TargetLang.es: return 'es';
+      case TargetLang.fr: return 'fr';
     }
   }
   
@@ -31,6 +32,7 @@ extension TargetLangExtension on TargetLang {
       case TargetLang.en: return 'en-US';
       case TargetLang.tr: return 'tr-TR';
       case TargetLang.es: return 'es-ES';
+      case TargetLang.fr: return 'fr-FR';
     }
   }
   
@@ -40,6 +42,7 @@ extension TargetLangExtension on TargetLang {
       case TargetLang.en: return '🇺🇸';
       case TargetLang.tr: return '🇹🇷';
       case TargetLang.es: return '🇪🇸';
+      case TargetLang.fr: return '🇫🇷';
     }
   }
   
@@ -49,6 +52,7 @@ extension TargetLangExtension on TargetLang {
       case TargetLang.en: return 'الإنجليزية';
       case TargetLang.tr: return 'التركية';
       case TargetLang.es: return 'الإسبانية';
+      case TargetLang.fr: return 'الفرنسية';
     }
   }
   
@@ -58,6 +62,7 @@ extension TargetLangExtension on TargetLang {
       case TargetLang.en: return 'English';
       case TargetLang.tr: return 'Türkçe';
       case TargetLang.es: return 'Español';
+      case TargetLang.fr: return 'Français';
     }
   }
   
@@ -68,6 +73,7 @@ extension TargetLangExtension on TargetLang {
       case TargetLang.en: return 'Please speak now. Keep it short.';
       case TargetLang.tr: return 'Lütfen şimdi konuşun. Kısa cümlelerle.';
       case TargetLang.es: return 'Habla ahora, por favor. Frases cortas.';
+      case TargetLang.fr: return 'Parlez maintenant, s\'il vous plaît. Phrases courtes.';
     }
   }
 }
