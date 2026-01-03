@@ -25,6 +25,9 @@ enum UsageType {
   
   /// GUL translations
   gulTranslations,
+
+  /// WhatsApp sends (Gate COMM-1)
+  whatsappSends,
 }
 
 extension UsageTypeExtension on UsageType {
@@ -45,6 +48,8 @@ extension UsageTypeExtension on UsageType {
         return 'cloud_boost_attempted';
       case UsageType.gulTranslations:
         return 'gul_translations';
+      case UsageType.whatsappSends:
+        return 'whatsapp_sends';
     }
   }
   
@@ -65,6 +70,8 @@ extension UsageTypeExtension on UsageType {
         return 'التعزيز السحابي';
       case UsageType.gulTranslations:
         return 'الترجمات';
+      case UsageType.whatsappSends:
+        return 'إرسال واتساب';
     }
   }
   
@@ -85,6 +92,8 @@ extension UsageTypeExtension on UsageType {
         return 'Cloud Boosts';
       case UsageType.gulTranslations:
         return 'Translations';
+      case UsageType.whatsappSends:
+        return 'WhatsApp Sends';
     }
   }
   
