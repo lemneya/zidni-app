@@ -90,6 +90,26 @@ def get_whisper_model():
     return _whisper_model
 
 
+def preload_models():
+    """
+    Pre-load models at server startup to avoid cold start delays.
+
+    PERFORMANCE OPTIMIZATION: Loading Whisper model takes 10-30 seconds,
+    so we do it once at startup instead of on first request.
+    """
+    logger.info("Pre-loading models at startup...")
+
+    # Pre-load Whisper model
+    try:
+        get_whisper_model()
+        logger.info("✓ Whisper model pre-loaded successfully")
+    except Exception as e:
+        logger.error(f"✗ Failed to pre-load Whisper model: {e}")
+
+    # TODO: Pre-load LLM model when implemented
+    logger.info("Model pre-loading complete")
+
+
 def get_llm_response(prompt: str, system_prompt: str = None, max_tokens: int = 1024) -> str:
     """
     Generate text using local LLM.
@@ -285,4 +305,8 @@ if __name__ == '__main__':
 ║  Running on: http://{HOST}:{PORT}                           ║
 ╚═══════════════════════════════════════════════════════════╝
 """)
+
+    # PERFORMANCE OPTIMIZATION: Pre-load models to eliminate cold start
+    preload_models()
+
     app.run(host=HOST, port=PORT, debug=False)

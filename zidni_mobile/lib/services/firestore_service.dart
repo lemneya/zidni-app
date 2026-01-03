@@ -9,12 +9,13 @@ class FirestoreService {
 
   String? get _uid => _auth.currentUser?.uid;
 
-  Stream<List<DealFolder>> getDealFolders() {
+  Stream<List<DealFolder>> getDealFolders({int limit = 20}) {
     if (_uid == null) return Stream.value([]);
     return _db
         .collection('deal_folders')
         .where('ownerUid', isEqualTo: _uid)
         .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => DealFolder.fromFirestore(doc.id, doc.data()))
@@ -22,38 +23,38 @@ class FirestoreService {
   }
 
   /// Get folders for follow-up queue (Hot/Warm priority, not done)
-  Stream<List<DealFolder>> getFollowupQueue({bool showDone = false, List<String>? priorities}) {
+  Stream<List<DealFolder>> getFollowupQueue({
+    bool showDone = false,
+    List<String>? priorities,
+    int limit = 20,
+  }) {
     if (_uid == null) return Stream.value([]);
-    
+
     Query<Map<String, dynamic>> query = _db
         .collection('deal_folders')
         .where('ownerUid', isEqualTo: _uid);
-    
+
     // Filter by priority if specified
     if (priorities != null && priorities.isNotEmpty) {
       query = query.where('priority', whereIn: priorities);
     }
-    
+
     // Filter by followupDone status
     if (!showDone) {
       query = query.where('followupDone', isEqualTo: false);
     }
-    
-    // Order by lastCaptureAt (most recent action first), with null-safe client-side sort
+
+    // Server-side ordering by lastCaptureAt (now always set, never null)
+    // Most recent activity first
+    query = query
+        .orderBy('lastCaptureAt', descending: true)
+        .limit(limit);
+
     return query
         .snapshots()
-        .map((snapshot) {
-          final folders = snapshot.docs
-              .map((doc) => DealFolder.fromFirestore(doc.id, doc.data()))
-              .toList();
-          // Sort: folders with lastCaptureAt first (desc), then by createdAt (desc)
-          folders.sort((a, b) {
-            final aTime = a.lastCaptureAt ?? a.createdAt;
-            final bTime = b.lastCaptureAt ?? b.createdAt;
-            return bTime.compareTo(aTime);
-          });
-          return folders;
-        });
+        .map((snapshot) => snapshot.docs
+            .map((doc) => DealFolder.fromFirestore(doc.id, doc.data()))
+            .toList());
   }
 
   Future<DocumentReference> createDealFolder({
@@ -63,9 +64,11 @@ class FirestoreService {
     String? priority,
   }) {
     if (_uid == null) throw Exception("User not logged in");
+    // Initialize lastCaptureAt to createdAt for server-side ordering
+    final timestamp = FieldValue.serverTimestamp();
     return _db.collection('deal_folders').add({
       'ownerUid': _uid,
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': timestamp,
       'supplierName': supplierName,
       'boothHall': boothHall,
       'mode': 'personal',
@@ -73,7 +76,7 @@ class FirestoreService {
       'category': category,
       'priority': priority,
       'followupDone': false,
-      'lastCaptureAt': null,
+      'lastCaptureAt': timestamp, // Same as createdAt initially
     });
   }
 
@@ -84,12 +87,13 @@ class FirestoreService {
     });
   }
 
-  Stream<List<GulCapture>> getCapturesForFolder(String folderId) {
+  Stream<List<GulCapture>> getCapturesForFolder(String folderId, {int limit = 20}) {
     return _db
         .collection('deal_folders')
         .doc(folderId)
         .collection('captures')
         .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => GulCapture.fromFirestore(doc.id, doc.data()))
