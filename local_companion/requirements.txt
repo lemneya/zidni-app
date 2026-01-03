@@ -11,6 +11,9 @@ flask-limiter>=3.5.0
 # Production WSGI server (for deployment)
 gunicorn>=21.0.0
 
+# MONITORING: Error tracking
+sentry-sdk[flask]>=1.40.0
+
 # STT - OpenAI Whisper
 openai-whisper>=20231117
 

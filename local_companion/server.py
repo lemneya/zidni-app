@@ -21,6 +21,19 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+
+# MONITORING: Initialize Sentry for error tracking
+sentry_sdk.init(
+    dsn=os.environ.get('SENTRY_DSN', ''),
+    integrations=[FlaskIntegration()],
+    environment=os.environ.get('COMPANION_ENV', 'development'),
+    release=f"zidni-companion@{os.environ.get('VERSION', '1.0.0')}",
+    traces_sample_rate=0.2 if os.environ.get('COMPANION_ENV') == 'production' else 1.0,
+    profiles_sample_rate=0.2 if os.environ.get('COMPANION_ENV') == 'production' else 1.0,
+    before_send=lambda event, hint: event if os.environ.get('SENTRY_DSN') else None,
+)
 
 app = Flask(__name__)
 

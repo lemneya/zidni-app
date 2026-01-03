@@ -40,3 +40,27 @@ class EnvConfig {
   /// Whether to enable analytics.
   static bool get enableAnalytics => isProd;
 }
+
+/// Simplified environment configuration for quick access
+///
+/// IMPORTANT: Replace SENTRY_DSN_HERE with your actual Sentry DSN before deployment
+class Env {
+  /// Sentry DSN for error tracking
+  /// Get this from: https://sentry.io/settings/[org]/projects/[project]/keys/
+  static const String sentryDsn = String.fromEnvironment(
+    'SENTRY_DSN',
+    defaultValue: '', // Empty in development, must be set for production
+  );
+
+  /// Current environment name
+  static String get environment => isProduction ? 'production' : 'development';
+
+  /// App version (should match pubspec.yaml)
+  static const String appVersion = '1.0.0';
+
+  /// Whether running in production
+  static bool get isProduction => const bool.fromEnvironment('dart.vm.product');
+
+  /// Whether to enable Sentry
+  static bool get sentryEnabled => sentryDsn.isNotEmpty;
+}
