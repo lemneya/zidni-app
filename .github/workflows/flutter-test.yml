@@ -1,0 +1,92 @@
+name: Flutter Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'zidni_mobile/**'
+      - '.github/workflows/flutter-test.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'zidni_mobile/**'
+
+jobs:
+  test:
+    name: Test Flutter App
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: zidni_mobile
+        run: flutter pub get
+
+      - name: Verify formatting
+        working-directory: zidni_mobile
+        run: dart format --set-exit-if-changed .
+
+      - name: Analyze code
+        working-directory: zidni_mobile
+        run: flutter analyze --fatal-infos
+
+      - name: Run tests
+        working-directory: zidni_mobile
+        run: flutter test --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: zidni_mobile/coverage/lcov.info
+          flags: flutter
+          name: flutter-coverage
+
+      - name: Check for TODOs
+        working-directory: zidni_mobile
+        run: |
+          if grep -r "TODO" lib/ --exclude-dir=.dart_tool; then
+            echo "⚠️  Warning: TODO comments found. Please track them in issues."
+            exit 0
+          fi
+
+  build:
+    name: Build Flutter App
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        working-directory: zidni_mobile
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: zidni_mobile
+        run: flutter build apk --debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-debug
+          path: zidni_mobile/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7

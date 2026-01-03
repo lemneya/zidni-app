@@ -1,0 +1,108 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocumentOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.ownerUid;
+    }
+
+    function willBeDocumentOwner() {
+      return isAuthenticated() && request.auth.uid == request.resource.data.ownerUid;
+    }
+
+    // Deal Folders Collection
+    // Users can only read/write their own deal folders
+    match /deal_folders/{folderId} {
+      // Allow read if user owns the folder
+      allow read: if isAuthenticated() && isDocumentOwner();
+
+      // Allow create if user sets themselves as owner
+      allow create: if isAuthenticated() && willBeDocumentOwner()
+                    && request.resource.data.keys().hasAll(['ownerUid', 'name', 'createdAt'])
+                    && request.resource.data.ownerUid is string
+                    && request.resource.data.name is string
+                    && request.resource.data.createdAt is timestamp;
+
+      // Allow update if user owns the folder and doesn't change ownerUid
+      allow update: if isAuthenticated() && isDocumentOwner()
+                    && request.resource.data.ownerUid == resource.data.ownerUid;
+
+      // Allow delete if user owns the folder
+      allow delete: if isAuthenticated() && isDocumentOwner();
+
+      // Captures subcollection
+      match /captures/{captureId} {
+        // Allow read if user owns the parent folder
+        allow read: if isAuthenticated() &&
+                      get(/databases/$(database)/documents/deal_folders/$(folderId)).data.ownerUid == request.auth.uid;
+
+        // Allow create if user owns the parent folder
+        allow create: if isAuthenticated() &&
+                        get(/databases/$(database)/documents/deal_folders/$(folderId)).data.ownerUid == request.auth.uid
+                        && request.resource.data.keys().hasAll(['transcript', 'capturedAt'])
+                        && request.resource.data.transcript is string
+                        && request.resource.data.capturedAt is timestamp;
+
+        // Allow update if user owns the parent folder
+        allow update: if isAuthenticated() &&
+                        get(/databases/$(database)/documents/deal_folders/$(folderId)).data.ownerUid == request.auth.uid;
+
+        // Allow delete if user owns the parent folder
+        allow delete: if isAuthenticated() &&
+                        get(/databases/$(database)/documents/deal_folders/$(folderId)).data.ownerUid == request.auth.uid;
+      }
+    }
+
+    // User Profiles (optional - if you store user data)
+    match /users/{userId} {
+      // Users can only read their own profile
+      allow read: if isAuthenticated() && isOwner(userId);
+
+      // Users can only create their own profile
+      allow create: if isAuthenticated() && isOwner(userId)
+                    && request.resource.data.keys().hasAll(['uid', 'createdAt'])
+                    && request.resource.data.uid == request.auth.uid;
+
+      // Users can only update their own profile
+      allow update: if isAuthenticated() && isOwner(userId)
+                    && request.resource.data.uid == resource.data.uid;
+
+      // Users can delete their own profile
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+
+    // Usage Meter (for billing/entitlement tracking)
+    match /usage/{userId} {
+      // Users can read their own usage
+      allow read: if isAuthenticated() && isOwner(userId);
+
+      // Only the system (via Cloud Functions) should write usage
+      // Users cannot modify their own usage records
+      allow write: if false;
+    }
+
+    // Audit Logs (optional - for compliance)
+    match /audit_logs/{logId} {
+      // Only authenticated users can read their own audit logs
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+      // Users cannot write audit logs (only backend/Cloud Functions can)
+      allow write: if false;
+    }
+
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

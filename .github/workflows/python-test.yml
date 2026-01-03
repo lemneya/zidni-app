@@ -1,0 +1,147 @@
+name: Python Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'local_companion/**'
+      - '.github/workflows/python-test.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'local_companion/**'
+
+jobs:
+  test:
+    name: Test Python Companion Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'local_companion/requirements.txt'
+
+      - name: Install dependencies
+        working-directory: local_companion
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-flask flake8 black
+
+      - name: Check code formatting
+        working-directory: local_companion
+        run: black --check .
+
+      - name: Lint with flake8
+        working-directory: local_companion
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Create test file
+        working-directory: local_companion
+        run: |
+          mkdir -p tests
+          cat > tests/test_server.py << 'EOF'
+          import pytest
+          from server import app
+
+          @pytest.fixture
+          def client():
+              app.config['TESTING'] = True
+              with app.test_client() as client:
+                  yield client
+
+          def test_health_endpoint(client):
+              """Test the health check endpoint"""
+              rv = client.get('/health')
+              assert rv.status_code == 200
+              data = rv.get_json()
+              assert data['status'] == 'healthy'
+              assert 'version' in data
+
+          def test_index_endpoint(client):
+              """Test the index endpoint"""
+              rv = client.get('/')
+              assert rv.status_code == 200
+              data = rv.get_json()
+              assert 'name' in data
+              assert 'Zidni' in data['name']
+
+          def test_stt_no_file(client):
+              """Test STT endpoint without audio file"""
+              rv = client.post('/stt')
+              assert rv.status_code == 400
+              data = rv.get_json()
+              assert 'error' in data
+
+          def test_llm_no_prompt(client):
+              """Test LLM endpoint without prompt"""
+              rv = client.post('/llm', json={})
+              assert rv.status_code == 400
+              data = rv.get_json()
+              assert 'error' in data
+
+          def test_llm_valid_request(client):
+              """Test LLM endpoint with valid prompt"""
+              rv = client.post('/llm', json={'prompt': 'test prompt'})
+              assert rv.status_code == 200
+              data = rv.get_json()
+              assert 'text' in data
+          EOF
+
+      - name: Run tests with coverage
+        working-directory: local_companion
+        run: pytest tests/ --cov=. --cov-report=xml --cov-report=term
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: local_companion/coverage.xml
+          flags: python
+          name: python-coverage
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: local_companion
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install safety bandit
+
+      - name: Check for known security vulnerabilities
+        working-directory: local_companion
+        run: safety check --json || true
+
+      - name: Run bandit security linter
+        working-directory: local_companion
+        run: bandit -r . -ll -f json -o bandit-report.json || true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: local_companion/*-report.json
+          retention-days: 30
