@@ -24,11 +24,25 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            // Indexes
+            // PERFORMANCE: Optimized indexes for common queries
+            // Single column indexes
             $table->index('user_id');
             $table->index('firebase_id');
             $table->index('is_archived');
             $table->index('created_at');
+
+            // Composite indexes for query optimization (order matters!)
+            // Follow-up queue: ORDER BY last_capture_at DESC WHERE user_id = ?
+            $table->index(['user_id', 'last_capture_at'], 'idx_user_last_capture');
+
+            // Recent deals: ORDER BY created_at DESC WHERE user_id = ?
+            $table->index(['user_id', 'created_at'], 'idx_user_created');
+
+            // Search by name: WHERE user_id = ? AND name LIKE ?
+            $table->index(['user_id', 'name'], 'idx_user_name');
+
+            // Archived filter: WHERE user_id = ? AND is_archived = ?
+            $table->index(['user_id', 'is_archived', 'created_at'], 'idx_user_archive_created');
         });
     }
 

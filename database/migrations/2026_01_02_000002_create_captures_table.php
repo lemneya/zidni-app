@@ -26,13 +26,27 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            // Indexes
+            // PERFORMANCE: Optimized indexes for common queries
+            // Single column indexes
             $table->index('deal_folder_id');
             $table->index('user_id');
             $table->index('firebase_id');
             $table->index('captured_at');
             $table->index('followup_done');
             $table->index('source');
+
+            // Composite indexes for query optimization
+            // Folder timeline: ORDER BY captured_at DESC WHERE deal_folder_id = ?
+            $table->index(['deal_folder_id', 'captured_at'], 'idx_folder_timeline');
+
+            // User timeline: ORDER BY captured_at DESC WHERE user_id = ?
+            $table->index(['user_id', 'captured_at'], 'idx_user_timeline');
+
+            // Follow-up filter: WHERE user_id = ? AND followup_done = ?
+            $table->index(['user_id', 'followup_done', 'captured_at'], 'idx_user_followup');
+
+            // Offline queue: WHERE user_id = ? AND source = 'offline'
+            $table->index(['user_id', 'source', 'captured_at'], 'idx_user_source');
         });
     }
 
