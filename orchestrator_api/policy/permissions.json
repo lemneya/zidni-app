@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Permission matrix for Zidni Orchestrator API - maps client roles to allowed tools",
+  "updated": "2026-01-31",
+
+  "roles": {
+    "consumer_app": {
+      "description": "Zidni Home mobile application (Flutter)",
+      "face": "home",
+      "trust_level": "consumer",
+      "allowed_tools": [
+        "zidni.detect_mode",
+        "zidni.set_mode",
+        "zidni.parse_product_link",
+        "zidni.save_to_china_list",
+        "zidni.draft_supplier_inquiry_zh",
+        "zidni.create_po_skeleton",
+        "zidni.save_evidence",
+        "zidni.translate_text",
+        "zidni.summarize_text",
+        "zidni.get_recent_items"
+      ],
+      "denied_tools": "*"
+    },
+
+    "consumer_whatsapp": {
+      "description": "Zidni Home via WhatsApp channel",
+      "face": "home",
+      "trust_level": "consumer",
+      "allowed_tools": [
+        "zidni.detect_mode",
+        "zidni.set_mode",
+        "zidni.parse_product_link",
+        "zidni.save_to_china_list",
+        "zidni.draft_supplier_inquiry_zh",
+        "zidni.create_po_skeleton",
+        "zidni.save_evidence",
+        "zidni.translate_text",
+        "zidni.summarize_text",
+        "zidni.get_recent_items"
+      ],
+      "denied_tools": "*"
+    },
+
+    "studio_operator": {
+      "description": "Zidni Studio web console (authenticated operators)",
+      "face": "studio",
+      "trust_level": "operator",
+      "allowed_tools": "*",
+      "denied_tools": []
+    }
+  },
+
+  "safe_tools": {
+    "description": "Tools explicitly marked safe for consumer exposure",
+    "list": [
+      {
+        "name": "zidni.detect_mode",
+        "description": "Detect appropriate mode from user input",
+        "risk_level": "none",
+        "data_access": "read_only"
+      },
+      {
+        "name": "zidni.set_mode",
+        "description": "Switch to a specific mode",
+        "risk_level": "none",
+        "data_access": "session_only"
+      },
+      {
+        "name": "zidni.parse_product_link",
+        "description": "Extract product info from URL",
+        "risk_level": "low",
+        "data_access": "external_fetch"
+      },
+      {
+        "name": "zidni.save_to_china_list",
+        "description": "Save product to China shopping list",
+        "risk_level": "low",
+        "data_access": "user_vault_write"
+      },
+      {
+        "name": "zidni.draft_supplier_inquiry_zh",
+        "description": "Draft Chinese supplier inquiry message",
+        "risk_level": "low",
+        "data_access": "none"
+      },
+      {
+        "name": "zidni.create_po_skeleton",
+        "description": "Create purchase order skeleton document",
+        "risk_level": "low",
+        "data_access": "none"
+      },
+      {
+        "name": "zidni.save_evidence",
+        "description": "Save receipt/evidence image to vault",
+        "risk_level": "low",
+        "data_access": "user_vault_write"
+      },
+      {
+        "name": "zidni.translate_text",
+        "description": "Translate text between languages",
+        "risk_level": "none",
+        "data_access": "none"
+      },
+      {
+        "name": "zidni.summarize_text",
+        "description": "Summarize long text content",
+        "risk_level": "none",
+        "data_access": "none"
+      },
+      {
+        "name": "zidni.get_recent_items",
+        "description": "Retrieve recent items from user vault",
+        "risk_level": "low",
+        "data_access": "user_vault_read"
+      }
+    ]
+  },
+
+  "dangerous_tools": {
+    "description": "Tools explicitly denied to consumer roles",
+    "list": [
+      {
+        "name": "admin.delete_user",
+        "reason": "Destructive operation - operator only"
+      },
+      {
+        "name": "admin.delete_all_data",
+        "reason": "Destructive operation - operator only"
+      },
+      {
+        "name": "admin.export_all_users",
+        "reason": "Privacy sensitive - operator only"
+      },
+      {
+        "name": "admin.modify_permissions",
+        "reason": "Security critical - operator only"
+      },
+      {
+        "name": "admin.execute_raw_query",
+        "reason": "Direct database access - operator only"
+      },
+      {
+        "name": "batch.bulk_import",
+        "reason": "Batch operation - operator only"
+      },
+      {
+        "name": "batch.bulk_export",
+        "reason": "Batch operation - operator only"
+      },
+      {
+        "name": "system.restart_service",
+        "reason": "System operation - operator only"
+      },
+      {
+        "name": "system.view_logs",
+        "reason": "System diagnostics - operator only"
+      },
+      {
+        "name": "prompt.edit_system_prompt",
+        "reason": "Prompt injection risk - operator only"
+      }
+    ]
+  },
+
+  "enforcement": {
+    "mode": "deny_by_default",
+    "description": "Any tool not in allowed_tools is automatically denied for consumer roles",
+    "validation": "server_side_only",
+    "audit_logging": true
+  }
+}
