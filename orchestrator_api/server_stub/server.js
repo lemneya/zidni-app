@@ -5,6 +5,11 @@
  * This validates tool names against the allowlist from permissions.json.
  *
  * NOT for production use - stub only returns placeholder responses.
+ *
+ * Role Enforcement:
+ * - Default role: consumer_app (cannot be escalated via headers alone)
+ * - To test operator flows: set X-Stub-Secret header matching STUB_SECRET env var
+ * - Only with valid stub secret can X-Client-Role header override the default
  */
 
 const express = require('express');
@@ -12,11 +17,34 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Load permissions at startup
 const permissionsPath = path.join(__dirname, '..', 'policy', 'permissions.json');
 const permissions = JSON.parse(fs.readFileSync(permissionsPath, 'utf8'));
+
+// Stub secret for testing (default for local dev)
+const STUB_SECRET = process.env.STUB_SECRET || 'test-stub-secret-do-not-use-in-prod';
+
+/**
+ * Derive client role from request headers
+ * - Without valid stub secret: always consumer_app
+ * - With valid stub secret: use X-Client-Role header
+ */
+function deriveClientRole(req) {
+  const stubSecret = req.get('X-Stub-Secret');
+  const requestedRole = req.get('X-Client-Role');
+
+  // Only allow role override if stub secret matches
+  if (stubSecret === STUB_SECRET && requestedRole) {
+    if (permissions.roles[requestedRole]) {
+      return requestedRole;
+    }
+  }
+
+  // Default to consumer_app (safest default)
+  return 'consumer_app';
+}
 
 /**
  * Check if a tool is allowed for a given client role
@@ -41,6 +69,13 @@ function isToolAllowed(toolName, clientRole) {
 }
 
 /**
+ * Check if role is a consumer role
+ */
+function isConsumerRole(clientRole) {
+  return clientRole === 'consumer_app' || clientRole === 'consumer_whatsapp';
+}
+
+/**
  * Get safe tools list
  */
 function getSafeTools() {
@@ -49,12 +84,22 @@ function getSafeTools() {
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '0.1.0-stub' });
+  res.json({ status: 'ok', version: '0.2.0-stub' });
 });
 
 // POST /tools/invoke - Invoke a tool
 app.post('/orchestrator/v1/tools/invoke', (req, res) => {
-  const { tool, params, client_role, session_id } = req.body;
+  // Stub-level auth check (real impl would validate JWT)
+  const authHeader = req.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      error: 'UNAUTHORIZED',
+      message: 'Missing or invalid Authorization header'
+    });
+  }
+
+  const { tool, params, session_id } = req.body;
 
   if (!tool) {
     return res.status(400).json({
@@ -64,13 +109,8 @@ app.post('/orchestrator/v1/tools/invoke', (req, res) => {
     });
   }
 
-  if (!client_role) {
-    return res.status(400).json({
-      success: false,
-      error: 'MISSING_ROLE',
-      message: 'Client role is required'
-    });
-  }
+  // Derive role from headers (NOT from request body)
+  const clientRole = deriveClientRole(req);
 
   // Check if tool exists in our known tools
   const safeTools = getSafeTools();
@@ -79,8 +119,13 @@ app.post('/orchestrator/v1/tools/invoke', (req, res) => {
     ...permissions.dangerous_tools.list.map(t => t.name)
   ];
 
-  // For stub: only check against known tools
-  const isKnown = knownTools.includes(tool) || tool.startsWith('zidni.') || tool.startsWith('admin.') || tool.startsWith('batch.') || tool.startsWith('system.') || tool.startsWith('prompt.');
+  // For stub: check against known tool patterns
+  const isKnown = knownTools.includes(tool) ||
+    tool.startsWith('zidni.') ||
+    tool.startsWith('admin.') ||
+    tool.startsWith('batch.') ||
+    tool.startsWith('system.') ||
+    tool.startsWith('prompt.');
 
   if (!isKnown) {
     return res.status(404).json({
@@ -91,13 +136,23 @@ app.post('/orchestrator/v1/tools/invoke', (req, res) => {
   }
 
   // Check permission
-  const check = isToolAllowed(tool, client_role);
+  const check = isToolAllowed(tool, clientRole);
   if (!check.allowed) {
-    return res.status(403).json({
-      success: false,
-      error: check.reason,
-      message: `Tool '${tool}' is not permitted for role '${client_role}'`
-    });
+    // Consumer roles get 404 (tool appears non-existent to prevent enumeration)
+    // Operator roles get 403 (they know the tool exists but is denied)
+    if (isConsumerRole(clientRole)) {
+      return res.status(404).json({
+        success: false,
+        error: 'TOOL_NOT_FOUND',
+        message: `Unknown tool: '${tool}'`
+      });
+    } else {
+      return res.status(403).json({
+        success: false,
+        error: 'TOOL_NOT_ALLOWED',
+        message: `Tool '${tool}' is not permitted`
+      });
+    }
   }
 
   // Return placeholder response (stub implementation)
@@ -106,7 +161,8 @@ app.post('/orchestrator/v1/tools/invoke', (req, res) => {
     stub: true,
     result: {
       message: `Tool '${tool}' executed successfully (stub response)`,
-      params_received: params || {}
+      params_received: params || {},
+      role_used: clientRole
     }
   });
 });
@@ -196,6 +252,7 @@ app.listen(PORT, () => {
   console.log(`Orchestrator stub server running on port ${PORT}`);
   console.log(`Safe tools loaded: ${getSafeTools().length}`);
   console.log(`Roles defined: ${Object.keys(permissions.roles).join(', ')}`);
+  console.log(`Stub secret configured: ${STUB_SECRET === 'test-stub-secret-do-not-use-in-prod' ? 'DEFAULT (dev only)' : 'CUSTOM'}`);
 });
 
-module.exports = app;
+module.exports = { app, deriveClientRole, isToolAllowed, STUB_SECRET };

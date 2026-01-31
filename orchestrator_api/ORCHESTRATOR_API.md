@@ -24,10 +24,11 @@ Invoke a registered tool by name.
   "params": {
     "text": "I want to find suppliers in Yiwu"
   },
-  "client_role": "consumer_app",
   "session_id": "abc123"
 }
 ```
+
+> **Note:** The client role is NOT included in the request body. See [Role Derivation](#role-derivation) below.
 
 **Response (Success):**
 ```json
@@ -40,16 +41,29 @@ Invoke a registered tool by name.
 }
 ```
 
-**Response (Denied):**
+**Response (Not Found / Denied for Consumer):**
+```json
+{
+  "success": false,
+  "error": "TOOL_NOT_FOUND",
+  "message": "Unknown tool: 'admin.delete_all'"
+}
+```
+
+> Consumer roles receive 404 for disallowed tools (tool appears non-existent to prevent enumeration).
+
+**Response (Denied for Operator):**
 ```json
 {
   "success": false,
   "error": "TOOL_NOT_ALLOWED",
-  "message": "Tool 'admin.delete_all' is not permitted for role 'consumer_app'"
+  "message": "Tool 'system.shutdown' is not permitted"
 }
 ```
 
-**Response (Not Found):**
+> Operator roles receive 403 for explicitly denied tools (they know the tool exists).
+
+**Response (Unknown Tool):**
 ```json
 {
   "success": false,
@@ -167,21 +181,37 @@ Save a new item to the user's vault.
 
 All requests require:
 - `Authorization: Bearer <token>` header
-- `X-Client-Role` header (one of: `consumer_app`, `consumer_whatsapp`, `studio_operator`)
 
-The Orchestrator validates the token and enforces permissions based on the declared client role.
+The Orchestrator validates the token and derives permissions from the authenticated identity.
+
+---
+
+## Role Derivation
+
+**Production behavior:**
+- The client role is determined **server-side** from the authenticated identity (token claims, API key type, etc.)
+- Clients **cannot** specify their own role — this prevents privilege escalation
+- Role mapping: mobile app tokens → `consumer_app`, WhatsApp webhooks → `consumer_whatsapp`, operator sessions → `studio_operator`
+
+**Stub/Testing behavior:**
+- For testing purposes, the stub server accepts role override via headers:
+  - `X-Client-Role`: The role to simulate (e.g., `studio_operator`)
+  - `X-Stub-Secret`: Must match `STUB_SECRET` environment variable
+- Without valid `X-Stub-Secret`, requests default to `consumer_app` role
+- This allows testing operator flows without a full auth implementation
 
 ---
 
 ## Error Codes
 
-| Code               | HTTP Status | Description                           |
-|--------------------|-------------|---------------------------------------|
-| `TOOL_NOT_FOUND`   | 404         | Requested tool does not exist         |
-| `TOOL_NOT_ALLOWED` | 403         | Tool not permitted for client role    |
-| `INVALID_MODE`     | 400         | Mode value not in allowed set         |
-| `UNAUTHORIZED`     | 401         | Missing or invalid auth token         |
-| `VAULT_ERROR`      | 500         | Internal vault storage error          |
+| Code               | HTTP Status | Context                    | Description                                    |
+|--------------------|-------------|----------------------------|------------------------------------------------|
+| `TOOL_NOT_FOUND`   | 404         | Consumer + disallowed tool | Tool hidden from consumer (prevents enumeration) |
+| `TOOL_NOT_FOUND`   | 404         | Any + unknown tool         | Tool genuinely does not exist                   |
+| `TOOL_NOT_ALLOWED` | 403         | Operator + denied tool     | Tool exists but explicitly denied               |
+| `INVALID_MODE`     | 400         | Any                        | Mode value not in allowed set                   |
+| `UNAUTHORIZED`     | 401         | Any                        | Missing or invalid auth token                   |
+| `VAULT_ERROR`      | 500         | Any                        | Internal vault storage error                    |
 
 ---
 
